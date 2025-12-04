@@ -1,6 +1,14 @@
 import sqlite3
 import os
 
+
+'''
+数据库初始化函数 init_db() 和句子插入函数insert_sentence(text, context_type, score)
+sqlite3 用于操作 SQLite 数据库，涉及sqlite的语法思路。
+数据库包含一个表 sentences，字段有 id（自增主键）、text（句子文本）、context_type（语境类型，高或低）、score（语境分数）。
+'''
+
+# 文件保存位置是项目根目录下的 capd_database.db
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'capd_database.db')
 
 def init_db():

@@ -8,11 +8,9 @@ def clean_text(text: str) -> str:
         return None
     
     # 1. 去除说话人标签，如 <S00>, <N01>
-    #  原始数据包含 <S00> 等标签
     text = re.sub(r'<[a-zA-Z0-9]+>', '', text)
     
     # 2. 去除英文单词 (如 eng, erm)
-    #  原始数据包含 eng
     text = re.sub(r'[a-zA-Z]+', '', text)
     
     # 3. 只保留：汉字 + 中文标点 (，。？！、)

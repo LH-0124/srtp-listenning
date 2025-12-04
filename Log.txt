@@ -1,0 +1,12 @@
+-----2025.11.24-----
+建立好模型的初步大纲
+
+-----2025.12.04-----
+搜索分词器，查找最佳的分词工具以及掩码策略。
+分词方式：jieba分词、bert的WordPiece分词
+掩码方式：wwm全词掩码
+
+分词方法-https://zhuanlan.zhihu.com/p/580782591
+wwm掩码方式-https://github.com/ymcui/Chinese-BERT-wwm、https://zhuanlan.zhihu.com/p/366396747、https://blog.csdn.net/weixin_49518391/article/details/126988107
+微调-https://aistudio.baidu.com/projectdetail/4459155?channelType=0&channel=0
+语料库-https://github.com/brightmart/nlp_chinese_corpus?tab=readme-ov-file#3%E7%99%BE%E7%A7%91%E9%97%AE%E7%AD%94baike2018qa150%E4%B8%87%E4%B8%AA%E5%B8%A6%E9%97%AE%E9%A2%98%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%97%AE%E7%AD%94
