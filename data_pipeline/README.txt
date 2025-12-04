@@ -1,4 +1,4 @@
- data_pipeline/           # [离线部分]
+data_pipeline/           # [离线部分]
 │
 │   ├── __init__.py          # (新建空文件，标记为包)
 │   ├── raw_data/            # [文件夹] 请放入 corpus.txt
