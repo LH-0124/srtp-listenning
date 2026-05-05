@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: SRTP-CAPD Backend API
+  version: 0.1.0
+  description: 面向听觉障碍人群的语音识别康复系统后端 API 草案
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Service status
+  /api/v1/sessions:
+    post:
+      summary: Create training session
+      responses:
+        "200":
+          description: Created session
+  /api/v1/tasks/next:
+    get:
+      summary: Get next training task
+      parameters:
+        - in: query
+          name: session_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Next task
+  /api/v1/answers:
+    post:
+      summary: Submit answer
+      responses:
+        "200":
+          description: Answer evaluation result
+  /api/v1/users/{user_id}/progress:
+    get:
+      summary: Get user progress
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User progress

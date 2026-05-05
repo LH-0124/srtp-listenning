@@ -1,0 +1,165 @@
+{
+  "project_id": "srtp-capd",
+  "project_name": "面向听觉障碍人群的语音识别康复系统",
+  "state_version": 1,
+  "current_state": "S0_DISCOVERED",
+  "completion_percent_estimate": 45,
+  "budget_remaining_cny": 700,
+  "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
+  "last_updated_at": "2026-05-05T21:28:47+08:00",
+  "last_updated_by": "codex-T00-audit",
+  "state_notes": "T00 audit completed; report generated; py_compile passed via PowerShell file enumeration; dependency install passed after escalation; server.main import smoke passed; hardcoded API key found.",
+  "global_constraints": [
+    "不要提交 API Key 或真实用户数据",
+    "先做小样本 smoke test，再决定是否租 GPU",
+    "后端 API 使用 /api/v1 前缀",
+    "每个任务完成后必须更新本文件和 .codex/logs/Txx_result.md",
+    "每次改动后至少运行 py_compile 或对应 pytest"
+  ],
+  "known_risks": [
+    {
+      "id": "RISK_SECRET_COMMITTED",
+      "level": "critical",
+      "description": "llm_augment.py 中疑似存在硬编码 API Key，必须立即移除并吊销旧 key。"
+    },
+    {
+      "id": "RISK_PIPELINE_NOT_RUN",
+      "level": "high",
+      "description": "语料处理未全量跑通，BERT/LTP/GPT 调用耗时和失败率未知。"
+    },
+    {
+      "id": "RISK_NO_USER_DATA",
+      "level": "high",
+      "description": "缺少用户、会话、答题、进度数据结构，小程序接入后无法保存训练记录。"
+    },
+    {
+      "id": "RISK_NOISE_UNNATURAL",
+      "level": "medium",
+      "description": "当前白噪声方式可能突兀，不适合训练体验。"
+    }
+  ],
+  "tasks": {
+    "T00_repo_audit": {
+      "status": "done",
+      "owner": "codex-T00-audit",
+      "started_at": "2026-05-05T21:17:12+08:00",
+      "completed_at": "2026-05-05T21:28:47+08:00",
+      "depends_on": [],
+      "task_file": ".codex/tasks/T00_repo_audit.md",
+      "acceptance": [
+        "生成 docs/AUDIT_REPORT.md",
+        "列出可编译性、接口、数据库、语料、音频、安全风险",
+        "不做大规模代码修改"
+      ],
+      "files_changed": [
+        "docs/AUDIT_REPORT.md",
+        ".codex/logs/T00_result.md",
+        ".codex/shared_state.json"
+      ],
+      "tests_run": [
+        "python -m py_compile data_pipeline/*.py server/*.py (failed in PowerShell because wildcard was not expanded)",
+        "Get-ChildItem -Path data_pipeline,server -Filter *.py | ForEach-Object { python -m py_compile $_.FullName; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } (passed)",
+        "pip install -r requirements.txt (failed in default sandbox due network access; passed after escalation)",
+        "python -c \"import server.main; print('server.main import ok')\" (failed before dependency install; passed after installing edge-tts)",
+        "Python sqlite3 schema inspection for capd_database.db"
+      ]
+    },
+    "T01_repo_stabilize": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T00_repo_audit"
+      ],
+      "task_file": ".codex/tasks/T01_repo_stabilize.md",
+      "acceptance": [
+        "Python 文件可编译",
+        "移除硬编码 secret",
+        "增加 .env.example",
+        "启动命令可执行"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T02_api_contract": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T01_repo_stabilize"
+      ],
+      "task_file": ".codex/tasks/T02_api_contract.md",
+      "acceptance": [
+        "实现 /health 和 /api/v1 核心接口",
+        "更新 docs/API_CONTRACT.md",
+        "openapi.json 可导出"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T03_data_pipeline": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T01_repo_stabilize"
+      ],
+      "task_file": ".codex/tasks/T03_data_pipeline.md",
+      "acceptance": [
+        "支持小样本处理",
+        "支持断点续跑",
+        "输出处理统计",
+        "给出是否需要 GPU 的估算依据"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T04_audio_noise": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T02_api_contract"
+      ],
+      "task_file": ".codex/tasks/T04_audio_noise.md",
+      "acceptance": [
+        "支持至少 3 种 noise profile",
+        "fade in/out",
+        "RMS 归一化",
+        "API 可选择 noise profile"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T05_user_data": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T02_api_contract"
+      ],
+      "task_file": ".codex/tasks/T05_user_data.md",
+      "acceptance": [
+        "用户、会话、答案、进度可持久化",
+        "提交答案后写数据库",
+        "提供进度查询接口"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T06_tests_docs_release": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T02_api_contract",
+        "T03_data_pipeline",
+        "T04_audio_noise",
+        "T05_user_data"
+      ],
+      "task_file": ".codex/tasks/T06_tests_docs_release.md",
+      "acceptance": [
+        "pytest 通过",
+        "curl smoke test 通过",
+        "README 和 API 文档可指导小程序接入",
+        "生成 DEMO_RUNBOOK.md"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    }
+  }
+}
