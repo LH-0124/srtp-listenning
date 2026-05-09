@@ -6,9 +6,9 @@
   "completion_percent_estimate": 90,
   "budget_remaining_cny": 700,
   "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
-  "last_updated_at": "2026-05-09T20:05:19+08:00",
-  "last_updated_by": "codex-next-phase-planner",
-  "state_notes": "T06 completed; next phase planned for local frontend demo and full frontend/backend integration. See docs/NEXT_PHASE_PLAN.md and tasks T07-T10.",
+  "last_updated_at": "2026-05-09T21:25:00+08:00",
+  "last_updated_by": "codex-T07-frontend-shell",
+  "state_notes": "T07 completed: root path now serves a static frontend shell; /api/v1 contract unchanged. Waiting for user confirmation before T08.",
   "global_constraints": [
     "不要提交 API Key 或真实用户数据",
     "先做小样本 smoke test，再决定是否租 GPU",
@@ -273,8 +273,10 @@
       ]
     },
     "T07_static_frontend_shell": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T07-frontend-shell",
+      "started_at": "2026-05-09T21:00:00+08:00",
+      "completed_at": "2026-05-09T21:25:00+08:00",
       "depends_on": [
         "T06_tests_docs_release"
       ],
@@ -285,8 +287,22 @@
         "Day/night theme toggle exists",
         "Existing /api/v1 contract remains stable"
       ],
-      "files_changed": [],
-      "tests_run": []
+      "files_changed": [
+        "server/main.py",
+        "web/index.html",
+        "web/styles.css",
+        "web/app.js",
+        "tests/test_api_contract.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T07_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 14 passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "uvicorn HTTP smoke: GET / returned 200 and contained CAPD Training Demo; GET /web/styles.css returned 200 (passed)",
+        "Browser plugin open http://127.0.0.1:8000/ (blocked by client: net::ERR_BLOCKED_BY_CLIENT)"
+      ]
     },
     "T08_frontend_api_flow_demo": {
       "status": "not_started",

@@ -3,6 +3,7 @@ import os
 import uuid
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.adaptive_logic import PatientState
@@ -36,16 +37,23 @@ SERVICE_NAME = "srtp-capd-backend"
 SERVICE_VERSION = "0.1.0"
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(ROOT_DIR, "assets")
+WEB_DIR = os.path.join(ROOT_DIR, "web")
 DB_PATH = os.path.join(ROOT_DIR, "capd_database.db")
 
 app = FastAPI(title="SRTP-CAPD Backend API", version=SERVICE_VERSION)
 
 os.makedirs(ASSETS_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=ASSETS_DIR), name="static")
+app.mount("/web", StaticFiles(directory=WEB_DIR), name="web")
 init_user_data_db(DB_PATH)
 
 sessions = {}
 tasks = {}
+
+
+@app.get("/", include_in_schema=False)
+def frontend_shell() -> FileResponse:
+    return FileResponse(os.path.join(WEB_DIR, "index.html"))
 
 
 def _difficulty_from_state(state: PatientState) -> Difficulty:

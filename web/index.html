@@ -1,0 +1,129 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SRTP-CAPD Local Demo</title>
+    <link rel="stylesheet" href="/web/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SRTP-CAPD Backend MVP</p>
+        <h1>CAPD Training Demo</h1>
+      </div>
+      <button class="theme-toggle" type="button" id="themeToggle" aria-pressed="false">
+        <span class="theme-icon" aria-hidden="true">Moon</span>
+        <span id="themeLabel">Dark mode</span>
+      </button>
+    </header>
+
+    <main class="app-shell">
+      <section class="panel session-panel" aria-labelledby="sessionTitle">
+        <div class="panel-heading">
+          <p class="section-kicker">Session</p>
+          <h2 id="sessionTitle">Session setup</h2>
+        </div>
+        <form class="control-grid">
+          <label>
+            User ID
+            <input type="text" value="demo_user" disabled />
+          </label>
+          <label>
+            Training mode
+            <select disabled>
+              <option>LOW</option>
+              <option>HIGH</option>
+            </select>
+          </label>
+          <label>
+            Noise profile
+            <select disabled>
+              <option>none</option>
+              <option>cafe</option>
+              <option>street</option>
+              <option>speech_babble</option>
+            </select>
+          </label>
+        </form>
+        <div class="placeholder-note">
+          T07 builds the static shell. API calls are wired in T08.
+        </div>
+      </section>
+
+      <section class="panel task-panel" aria-labelledby="taskTitle">
+        <div class="panel-heading">
+          <p class="section-kicker">Task</p>
+          <h2 id="taskTitle">Task and audio</h2>
+        </div>
+        <div class="audio-placeholder" role="img" aria-label="Audio player placeholder">
+          <div class="wave-bars" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p>Waiting for training audio</p>
+        </div>
+        <dl class="metric-row">
+          <div>
+            <dt>Speed</dt>
+            <dd>1.00x</dd>
+          </div>
+          <div>
+            <dt>SNR</dt>
+            <dd>20 dB</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>Idle</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel answer-panel" aria-labelledby="answerTitle">
+        <div class="panel-heading">
+          <p class="section-kicker">Answer</p>
+          <h2 id="answerTitle">Dictation input</h2>
+        </div>
+        <label>
+          User response
+          <textarea placeholder="T08 will submit answers from here" disabled></textarea>
+        </label>
+        <button class="primary-action" type="button" disabled>Submit answer</button>
+      </section>
+
+      <section class="panel progress-panel" aria-labelledby="progressTitle">
+        <div class="panel-heading">
+          <p class="section-kicker">Progress</p>
+          <h2 id="progressTitle">Training progress</h2>
+        </div>
+        <div class="progress-card">
+          <strong>0%</strong>
+          <span>Accuracy</span>
+        </div>
+        <dl class="progress-list">
+          <div><dt>Answered</dt><dd>0</dd></div>
+          <div><dt>Correct</dt><dd>0</dd></div>
+          <div><dt>Difficulty</dt><dd>Base</dd></div>
+        </dl>
+      </section>
+
+      <aside class="panel api-panel" aria-labelledby="apiStatusTitle">
+        <div class="panel-heading">
+          <p class="section-kicker">API</p>
+          <h2 id="apiStatusTitle">API status</h2>
+        </div>
+        <div class="status-line">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="apiStatus">Static shell loaded. Waiting for T08 /api/v1 wiring.</span>
+        </div>
+        <ul class="api-list" aria-label="Core API endpoints">
+          <li>POST /api/v1/sessions</li>
+          <li>GET /api/v1/tasks/next</li>
+          <li>POST /api/v1/answers</li>
+          <li>GET /api/v1/users/{user_id}/progress</li>
+        </ul>
+      </aside>
+    </main>
+
+    <script src="/web/app.js" defer></script>
+  </body>
+</html>

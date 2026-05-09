@@ -25,6 +25,21 @@ def test_health_and_openapi_core_paths(api_client):
         assert path in paths
 
 
+def test_root_serves_static_frontend_shell(api_client):
+    client, _ = api_client
+
+    root = client.get("/")
+    assert root.status_code == 200
+    assert "text/html" in root.headers["content-type"]
+    assert "CAPD Training Demo" in root.text
+    assert "/web/styles.css" in root.text
+    assert "/web/app.js" in root.text
+
+    script = client.get("/web/app.js")
+    assert script.status_code == 200
+    assert "capd-demo-theme" in script.text
+
+
 def test_session_task_answer_progress_persistence(api_client):
     client, db_path = api_client
 
