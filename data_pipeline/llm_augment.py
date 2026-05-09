@@ -12,8 +12,6 @@ load_dotenv()
 # API Key 
 # 安全获取，如果没配置则报错提醒
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY is not set")
 
 GPT_API_URL = os.getenv("GPT_API_URL", "https://api.openai.com/v1/chat/completions")
 GPT_MODEL = os.getenv("GPT_MODEL", "gpt-3.5-turbo")
@@ -32,6 +30,9 @@ def generate_similar_sentences(seed_sentence: str, num_variants: int = 3) -> Lis
         一个包含仿写句子的列表。
     """
     # a.构建发送给 GPT 的提示词 (Prompt)
+    if not OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY is not set; rerun with --no-augment or configure .env")
+
     prompt = f"""
     请仿照以下句子的句式和结构，根据其内容，生成 {num_variants} 个结构相似但措辞不同的新句子。
     请严格返回一个 JSON 数组，数组中只包含生成的句子字符串，不要包含任何额外的解释、编号或Markdown格式（如```json）。

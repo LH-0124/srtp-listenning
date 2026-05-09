@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: SRTP-CAPD Backend API
   version: 0.1.0
-  description: 面向听觉障碍人群的语音识别康复系统后端 API 草案
+  description: MVP API contract for the CAPD speech recognition rehabilitation backend.
 paths:
   /health:
     get:
@@ -10,12 +10,26 @@ paths:
       responses:
         "200":
           description: Service status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
   /api/v1/sessions:
     post:
       summary: Create training session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitSessionRequest"
       responses:
         "200":
           description: Created session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
   /api/v1/tasks/next:
     get:
       summary: Get next training task
@@ -28,12 +42,32 @@ paths:
       responses:
         "200":
           description: Next task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          description: Session not found
+        "503":
+          description: No training sentences available
   /api/v1/answers:
     post:
       summary: Submit answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerRequest"
       responses:
         "200":
           description: Answer evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResponse"
+        "404":
+          description: Session or task not found
   /api/v1/users/{user_id}/progress:
     get:
       summary: Get user progress
@@ -46,3 +80,122 @@ paths:
       responses:
         "200":
           description: User progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressResponse"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, service, version]
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: srtp-capd-backend
+        version:
+          type: string
+          example: 0.1.0
+    Difficulty:
+      type: object
+      required: [speed, snr]
+      properties:
+        speed:
+          type: number
+          example: 1.0
+        snr:
+          type: number
+          example: 20.0
+    TaskDifficulty:
+      allOf:
+        - $ref: "#/components/schemas/Difficulty"
+        - type: object
+          required: [noise_profile]
+          properties:
+            noise_profile:
+              $ref: "#/components/schemas/NoiseProfile"
+    InitSessionRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          example: demo_user
+        training_mode:
+          type: string
+          enum: [LOW, HIGH]
+          default: LOW
+        noise_profile:
+          $ref: "#/components/schemas/NoiseProfile"
+    SessionResponse:
+      type: object
+      required: [session_id, user_id, training_mode, difficulty]
+      properties:
+        session_id:
+          type: string
+        user_id:
+          type: string
+        training_mode:
+          type: string
+          enum: [LOW, HIGH]
+        difficulty:
+          $ref: "#/components/schemas/Difficulty"
+    TaskResponse:
+      type: object
+      required: [task_id, session_id, text_hash, target_text, audio_url, difficulty]
+      properties:
+        task_id:
+          type: string
+        session_id:
+          type: string
+        text_hash:
+          type: string
+        target_text:
+          type: string
+        audio_url:
+          type: string
+        difficulty:
+          $ref: "#/components/schemas/TaskDifficulty"
+    AnswerRequest:
+      type: object
+      required: [session_id, task_id, user_input]
+      properties:
+        session_id:
+          type: string
+        task_id:
+          type: string
+        user_input:
+          type: string
+    AnswerResponse:
+      type: object
+      required: [correct, score, message, new_difficulty]
+      properties:
+        correct:
+          type: boolean
+        score:
+          type: number
+        message:
+          type: string
+        new_difficulty:
+          $ref: "#/components/schemas/Difficulty"
+    ProgressResponse:
+      type: object
+      required: [user_id, total_answers, correct_count, accuracy, current_difficulty]
+      properties:
+        user_id:
+          type: string
+        total_answers:
+          type: integer
+        correct_count:
+          type: integer
+        accuracy:
+          type: number
+        current_difficulty:
+          $ref: "#/components/schemas/Difficulty"
+    NoiseProfile:
+      type: string
+      enum: [none, white, cafe, street, speech_babble]
+      default: none

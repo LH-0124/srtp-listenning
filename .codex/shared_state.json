@@ -2,13 +2,13 @@
   "project_id": "srtp-capd",
   "project_name": "面向听觉障碍人群的语音识别康复系统",
   "state_version": 1,
-  "current_state": "S1_REPO_STABILIZED",
-  "completion_percent_estimate": 50,
+  "current_state": "S4_PIPELINE_SMOKE_READY",
+  "completion_percent_estimate": 66,
   "budget_remaining_cny": 700,
   "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
-  "last_updated_at": "2026-05-05T22:19:06+08:00",
-  "last_updated_by": "codex-T01-repo",
-  "state_notes": "T01 completed; hardcoded API key removed; .env.example added; python-dotenv confirmed; compileall passed; server import and uvicorn smoke passed.",
+  "last_updated_at": "2026-05-09T16:17:47+08:00",
+  "last_updated_by": "codex-T03-pipeline",
+  "state_notes": "T03 completed; offline pipeline CLI now supports limit, batch size, resume, run statistics, error logging, and heuristic smoke mode. API layer was not modified by T03.",
   "global_constraints": [
     "不要提交 API Key 或真实用户数据",
     "先做小样本 smoke test，再决定是否租 GPU",
@@ -100,8 +100,10 @@
       ]
     },
     "T02_api_contract": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T02-api",
+      "started_at": "2026-05-09T16:13:33+08:00",
+      "completed_at": "2026-05-09T16:13:33+08:00",
       "depends_on": [
         "T01_repo_stabilize"
       ],
@@ -111,12 +113,26 @@
         "更新 docs/API_CONTRACT.md",
         "openapi.json 可导出"
       ],
-      "files_changed": [],
-      "tests_run": []
+      "files_changed": [
+        "server/main.py",
+        "server/models.py",
+        "docs/API_CONTRACT.md",
+        "docs/openapi-draft.yaml",
+        ".codex/shared_state.json",
+        ".codex/logs/T02_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q server (passed)",
+        "python -c \"from server.main import app; schema=app.openapi(); print(schema['info']['title']); print('/api/v1/sessions' in schema['paths']); print('/health' in schema['paths'])\" (passed)",
+        "python -m compileall -q data_pipeline server (passed)",
+        "python -c \"from fastapi.testclient import TestClient; from server.main import app; c=TestClient(app); print(c.get('/health').json()); r=c.post('/api/v1/sessions', json={'user_id':'demo_user','training_mode':'LOW','noise_profile':'none'}); print(r.status_code); print(sorted(r.json().keys())); print(c.get('/api/v1/users/demo_user/progress').json())\" (passed)"
+      ]
     },
     "T03_data_pipeline": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T03-pipeline",
+      "started_at": "2026-05-09T16:11:40+08:00",
+      "completed_at": "2026-05-09T16:17:47+08:00",
       "depends_on": [
         "T01_repo_stabilize"
       ],
@@ -127,8 +143,27 @@
         "输出处理统计",
         "给出是否需要 GPU 的估算依据"
       ],
-      "files_changed": [],
-      "tests_run": []
+      "files_changed": [
+        "data_pipeline/__init__.py",
+        "data_pipeline/database_manager.py",
+        "data_pipeline/llm_augment.py",
+        "data_pipeline/run_pipeline.py",
+        "docs/PIPELINE_RUNBOOK.md",
+        "capd_database.db",
+        "processed_corpus.txt",
+        ".codex/shared_state.json",
+        ".codex/logs/T03_result.md"
+      ],
+      "tests_run": [
+        "Get-ChildItem -Path data_pipeline,server -Filter *.py | ForEach-Object { python -m py_compile $_.FullName; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } (passed)",
+        "python -m data_pipeline.run_pipeline --help (passed)",
+        "python -c \"import data_pipeline.llm_augment; print('llm import ok')\" (passed)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --resume --scorer heuristic --no-augment --output processed_corpus.txt (passed; skipped 20 existing rows)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --scorer heuristic --no-augment --output processed_corpus.txt (passed; processed 20, skipped 20 duplicate rows, failed 0)",
+        "python -c \"import sqlite3; conn=sqlite3.connect('capd_database.db'); print(conn.execute('select count(*) from pipeline_runs').fetchone()[0]); print(conn.execute('select id, status, scorer, processed_count, success_count, skipped_count, failed_count from pipeline_runs order by id desc limit 3').fetchall()); print(conn.execute('pragma table_info(sentences)').fetchall()); conn.close()\" (passed)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --resume --scorer heuristic --no-augment --db-path .codex\\tmp\\t03_smoke.db --output .codex\\tmp\\t03_processed.tsv (failed: Python permission denied creating .codex\\tmp)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --resume --scorer heuristic --no-augment --db-path .codex\\logs\\t03_smoke.db --output .codex\\logs\\t03_processed.tsv (failed: Python permission denied opening new DB under .codex\\logs)"
+      ]
     },
     "T04_audio_noise": {
       "status": "not_started",
