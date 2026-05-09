@@ -1,122 +1,48 @@
-# PROJECT_STATE.md — SRTP-CAPD 项目状态说明
+# PROJECT_STATE.md - SRTP-CAPD Project State
 
-更新时间：2026-05-05
+Updated: 2026-05-09
 
-## 一、项目定位
+## Current Position
 
-项目名称：面向听觉障碍人群的语音识别康复系统  
-当前目标：先完成可演示、可接入小程序的后端 MVP，而不是追求完整科研级系统落地。
+The project is now a backend MVP with a local frontend demo. It is suitable for local demonstration and for mini program API integration planning.
 
-## 二、当前进度估计
+Current state in `.codex/shared_state.json`: `S6_TESTS_READY`.
 
-综合仓库结构和你提供的信息，当前项目约完成 40%—50%。
+Practical demo readiness after T07-T09:
 
-已经有：
+- `/api/v1` API contract is implemented and covered by tests.
+- SQLite persistence exists for users, sessions, tasks, answers, and progress.
+- Offline corpus pipeline supports small smoke runs and resumable processing.
+- Audio generation supports configurable noise profiles, fade, normalization, and peak limiting.
+- Automated tests pass.
+- `GET /` serves a local static frontend demo from `web/`.
+- The frontend can drive the session/task/answer/progress API flow and show friendly TTS/network error states.
 
-1. 初步后端目录结构：`data_pipeline/` 与 `server/`；
-2. 初步离线处理流程：清洗、BERT 语境评分、GPT 扩写、SQLite 入库；
-3. 初步在线服务：FastAPI 接口、随机抽题、TTS 生成音频、提交答案、自适应难度；
-4. 初步数据库文件和 processed corpus 示例；
-5. 立项 PPT 中的技术路线与研究目标。
+## Completed Milestones
 
-尚未完成：
+- M0 repository stabilization and secret cleanup.
+- M1 stable `/api/v1` API contract.
+- M2 user/session/answer/progress persistence.
+- M3 pipeline smoke path and runbook.
+- M4 audio noise profile improvements.
+- M5 tests, API docs, and demo runbook.
+- T07 static frontend shell.
+- T08 frontend API flow demo.
+- T09 frontend polish and accessibility pass.
 
-1. 稳定可运行的工程化结构；
-2. API contract 和小程序可用接口；
-3. 用户数据表、训练会话、答题记录、训练进度；
-4. 噪声处理自然度优化；
-5. 语料库全量处理、断点续跑、批处理、进度记录；
-6. 自动化测试；
-7. 部署说明；
-8. 安全处理，例如 API Key 移除；
-9. 可复现的演示流程。
+## Current Known Risks
 
-## 三、当前最重要的判断
+- `GET /api/v1/tasks/next` calls online `edge-tts`. In restricted network environments it may fail while connecting to `speech.platform.bing.com:443`. The frontend now preserves the session and shows a clear retry-friendly error.
+- Full BERT/LTP/GPT corpus processing has not been benchmarked at large scale. Keep using small smoke runs before considering GPU rental.
+- Generated audio naturalness still needs human listening review, especially for noisy profiles.
+- `capd_database.db` is a local demo database and may change during smoke tests. Do not treat it as real user data.
 
-### 1. 不建议立刻租 GPU 跑全量语料
+## Next Step
 
-先完成以下事情：
+Run T10 full demo acceptance:
 
-- 代码能编译；
-- pipeline 能用 20 条、100 条、500 条语料跑通；
-- 输出数据库字段稳定；
-- 能估算每 1000 条耗时；
-- 能断点续跑；
-- 能记录处理失败原因。
-
-完成以上以后，再决定是否用 700 元预算租 GPU 或云服务器。
-
-### 2. GPT Plus + 本地 Codex 已足够用于当前代码编写
-
-当前阶段主要是代码整理、API 设计、测试补齐、文档补齐。你已经有 GPT Plus，可以先用 Codex CLI 本地完成。只有以下情况才考虑额外买 API：
-
-- 要在 CI/CD 或脚本里大量自动运行 `codex exec`；
-- 本地 Plus 额度经常不够；
-- 希望和个人 ChatGPT 额度分开计费；
-- 团队多人自动化并行跑任务。
-
-### 3. 后端优先于算法精致化
-
-小程序接入最需要稳定接口和可测试数据。算法可以先做 MVP：
-
-- 语境分：先能稳定输出 HIGH/LOW；
-- 噪声：先提供 2—3 个自然 profile；
-- 自适应：先记录用户历史，并做简单阶梯调整；
-- API：必须稳定。
-
-## 四、项目核心里程碑
-
-### M0：仓库稳定与安全修复
-
-目标：
-
-- 所有 Python 文件能编译；
-- 移除硬编码 API Key；
-- 增加 `.env.example`；
-- 补齐基础 README；
-- 明确运行方式。
-
-### M1：API contract 与小程序接入层
-
-目标：
-
-- 新增 `/api/v1` 接口；
-- 返回稳定 JSON；
-- 能访问 `/openapi.json`；
-- 有 `docs/API_CONTRACT.md`。
-
-### M2：用户数据与训练记录
-
-目标：
-
-- 新增 users、sessions、answers、progress 表；
-- 每次训练有记录；
-- 用户可以查询历史和进度。
-
-### M3：语料 pipeline 工程化
-
-目标：
-
-- 支持分批处理；
-- 支持断点续跑；
-- 支持处理进度日志；
-- 先 CPU 小样本估算，再决定是否租 GPU。
-
-### M4：音频与噪声自然度优化
-
-目标：
-
-- 白噪声改为可配置噪声 profile；
-- 加入 fade in / fade out；
-- 控制音量归一化；
-- 输出样例可人工听感检查。
-
-### M5：测试、文档、演示
-
-目标：
-
-- pytest 通过；
-- curl smoke test 通过；
-- OpenAPI 可给小程序；
-- demo 数据库可用；
-- 一条命令启动服务。
+- rerun automated tests;
+- verify `/`, `/docs`, and `/openapi.json`;
+- run API smoke where TTS/network permits;
+- update final README/demo docs if needed;
+- produce the final submit/no-submit file list.

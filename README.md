@@ -1,6 +1,6 @@
 # SRTP-CAPD Backend MVP
 
-Backend MVP for a CAPD listening rehabilitation mini program. The service exposes a stable `/api/v1` API, stores user training history in SQLite, generates task audio, and includes an offline corpus pipeline.
+Backend MVP for a CAPD listening rehabilitation mini program. The service exposes a stable `/api/v1` API, stores user training history in SQLite, generates task audio, includes an offline corpus pipeline, and serves a local frontend demo at `/`.
 
 ## Quick Start
 
@@ -14,10 +14,13 @@ pytest -q
 python -m uvicorn server.main:app --host 127.0.0.1 --port 8000
 ```
 
-OpenAPI is available at:
+Open:
 
+- `http://127.0.0.1:8000/`
 - `http://127.0.0.1:8000/openapi.json`
 - `http://127.0.0.1:8000/docs`
+
+The root page is a static demo in `web/`. It can create sessions, request tasks, play returned audio, submit answers, refresh progress, and show API debug/error states.
 
 ## Core API
 
@@ -30,8 +33,6 @@ OpenAPI is available at:
 See `docs/API_CONTRACT.md` for request and response fields.
 
 ## Local Smoke Checks
-
-Run tests:
 
 ```powershell
 python -m compileall -q data_pipeline server tests
@@ -51,6 +52,12 @@ Run the fast offline pipeline smoke:
 python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --resume --scorer heuristic --no-augment --output processed_corpus.txt
 ```
 
+## Frontend Integration
+
+- Static demo assets live in `web/index.html`, `web/styles.css`, and `web/app.js`.
+- Frontend and mini program API guidance lives in `docs/FRONTEND_INTEGRATION.md`.
+- `GET /api/v1/tasks/next` uses `edge-tts`; if network access to the TTS service is blocked, the frontend keeps the session visible and shows a retry-friendly task/audio error.
+
 ## Demo Guide
 
-Use `docs/DEMO_RUNBOOK.md` for a step-by-step local demo, including how to inspect API responses, database persistence, pipeline output, and generated audio quality.
+Use `docs/DEMO_RUNBOOK.md` for a step-by-step local demo, including the `/` frontend, API responses, database persistence, pipeline output, and generated audio quality.
