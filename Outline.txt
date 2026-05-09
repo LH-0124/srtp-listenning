@@ -1,0 +1,36 @@
+SRTP-CAPD Backend MVP Outline
+
+1. Backend service
+   - FastAPI app in server/main.py
+   - Stable /api/v1 API contract
+   - OpenAPI at /openapi.json and Swagger UI at /docs
+
+2. Local frontend demo
+   - Static files in web/
+   - Served at http://127.0.0.1:8000/
+   - Demonstrates session, task audio, answer submission, progress, and API debug states
+
+3. Data persistence
+   - SQLite demo database: capd_database.db
+   - User/session/task/answer/progress tables
+   - Schema documented in docs/DATABASE_SCHEMA.md
+
+4. Corpus pipeline
+   - Entry point: python -m data_pipeline.run_pipeline
+   - Supports small smoke runs, resume mode, heuristic scoring, and no-augment mode
+   - Runbook: docs/PIPELINE_RUNBOOK.md
+
+5. Audio generation
+   - Audio service: server/audio_service.py
+   - Noise profiles: server/noise_profiles.py
+   - Uses edge-tts, so online TTS may fail when network access is restricted
+
+6. Testing and demo
+   - Compile: python -m compileall -q data_pipeline server tests
+   - Tests: pytest -q
+   - API smoke: scripts/api_smoke_test.ps1
+   - Demo runbook: docs/DEMO_RUNBOOK.md
+
+7. Remaining release step
+   - T10 full demo acceptance
+   - Final file submit/no-submit list

@@ -1,0 +1,387 @@
+{
+  "project_id": "srtp-capd",
+  "project_name": "面向听觉障碍人群的语音识别康复系统",
+  "state_version": 1,
+  "current_state": "S6_TESTS_READY",
+  "completion_percent_estimate": 90,
+  "budget_remaining_cny": 700,
+  "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
+  "last_updated_at": "2026-05-09T20:57:21+08:00",
+  "last_updated_by": "codex-T09-frontend-polish",
+  "state_notes": "T09 completed: static frontend demo has polished day/night themes, clear loading/error/success/empty states, responsive layout, and API debug visibility. Paused before T10.",
+  "global_constraints": [
+    "不要提交 API Key 或真实用户数据",
+    "先做小样本 smoke test，再决定是否租 GPU",
+    "后端 API 使用 /api/v1 前缀",
+    "每个任务完成后必须更新本文件和 .codex/logs/Txx_result.md",
+    "每次改动后至少运行 py_compile 或对应 pytest"
+  ],
+  "known_risks": [
+    {
+      "id": "RISK_SECRET_COMMITTED",
+      "level": "resolved",
+      "description": "T01 已移除 llm_augment.py 中的硬编码 API Key；用户已撤销旧 key。后续仍需避免提交 .env 或真实密钥。"
+    },
+    {
+      "id": "RISK_PIPELINE_NOT_RUN",
+      "level": "high",
+      "description": "语料处理未全量跑通，BERT/LTP/GPT 调用耗时和失败率未知。"
+    },
+    {
+      "id": "RISK_NO_USER_DATA",
+      "level": "resolved",
+      "description": "缺少用户、会话、答题、进度数据结构，小程序接入后无法保存训练记录。"
+    },
+    {
+      "id": "RISK_NOISE_UNNATURAL",
+      "level": "medium",
+      "description": "当基础 profile/fade/RMS 已完成，主观听感留给 T06 评估；如果过于不自然，可能需要调整参数或增加更复杂的处理（如频域滤波）。"
+    }
+  ],
+  "tasks": {
+    "T00_repo_audit": {
+      "status": "done",
+      "owner": "codex-T00-audit",
+      "started_at": "2026-05-05T21:17:12+08:00",
+      "completed_at": "2026-05-05T21:28:47+08:00",
+      "depends_on": [],
+      "task_file": ".codex/tasks/T00_repo_audit.md",
+      "acceptance": [
+        "生成 docs/AUDIT_REPORT.md",
+        "列出可编译性、接口、数据库、语料、音频、安全风险",
+        "不做大规模代码修改"
+      ],
+      "files_changed": [
+        "docs/AUDIT_REPORT.md",
+        ".codex/logs/T00_result.md",
+        ".codex/shared_state.json"
+      ],
+      "tests_run": [
+        "python -m py_compile data_pipeline/*.py server/*.py (failed in PowerShell because wildcard was not expanded)",
+        "Get-ChildItem -Path data_pipeline,server -Filter *.py | ForEach-Object { python -m py_compile $_.FullName; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } (passed)",
+        "pip install -r requirements.txt (failed in default sandbox due network access; passed after escalation)",
+        "python -c \"import server.main; print('server.main import ok')\" (failed before dependency install; passed after installing edge-tts)",
+        "Python sqlite3 schema inspection for capd_database.db"
+      ]
+    },
+    "T01_repo_stabilize": {
+      "status": "done",
+      "owner": "codex-T01-repo",
+      "started_at": "2026-05-05T21:59:56+08:00",
+      "completed_at": "2026-05-05T22:19:06+08:00",
+      "depends_on": [
+        "T00_repo_audit"
+      ],
+      "task_file": ".codex/tasks/T01_repo_stabilize.md",
+      "acceptance": [
+        "Python 文件可编译",
+        "移除硬编码 secret",
+        "增加 .env.example",
+        "启动命令可执行"
+      ],
+      "files_changed": [
+        ".env.example",
+        ".gitignore",
+        "data_pipeline/llm_augment.py",
+        "server/main.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T01_result.md"
+      ],
+      "tests_run": [
+        "rg -n '^python-dotenv$' requirements.txt (passed)",
+        "secret scan with rg excluding .env, .codex/logs, raw_data, binary audio, and pyc files (passed: no hardcoded secrets found)",
+        "python -m compileall -q data_pipeline server (passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "bash -lc \"python -m py_compile data_pipeline/*.py server/*.py\" (failed: Windows denied Bash/WSL instance creation)",
+        "python -m py_compile data_pipeline/*.py server/*.py (failed in PowerShell because wildcard was not expanded)",
+        "Get-ChildItem -Path data_pipeline,server -Filter *.py | ForEach-Object { python -m py_compile $_.FullName; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } (passed)",
+        "python -m uvicorn server.main:app --host 127.0.0.1 --port 8011 (short smoke passed)",
+        "python -m uvicorn server.main:app --reload --host 127.0.0.1 --port 8012 (short smoke passed)"
+      ]
+    },
+    "T02_api_contract": {
+      "status": "done",
+      "owner": "codex-T02-api",
+      "started_at": "2026-05-09T16:13:33+08:00",
+      "completed_at": "2026-05-09T16:13:33+08:00",
+      "depends_on": [
+        "T01_repo_stabilize"
+      ],
+      "task_file": ".codex/tasks/T02_api_contract.md",
+      "acceptance": [
+        "实现 /health 和 /api/v1 核心接口",
+        "更新 docs/API_CONTRACT.md",
+        "openapi.json 可导出"
+      ],
+      "files_changed": [
+        "server/main.py",
+        "server/models.py",
+        "docs/API_CONTRACT.md",
+        "docs/openapi-draft.yaml",
+        ".codex/shared_state.json",
+        ".codex/logs/T02_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q server (passed)",
+        "python -c \"from server.main import app; schema=app.openapi(); print(schema['info']['title']); print('/api/v1/sessions' in schema['paths']); print('/health' in schema['paths'])\" (passed)",
+        "python -m compileall -q data_pipeline server (passed)",
+        "python -c \"from fastapi.testclient import TestClient; from server.main import app; c=TestClient(app); print(c.get('/health').json()); r=c.post('/api/v1/sessions', json={'user_id':'demo_user','training_mode':'LOW','noise_profile':'none'}); print(r.status_code); print(sorted(r.json().keys())); print(c.get('/api/v1/users/demo_user/progress').json())\" (passed)"
+      ]
+    },
+    "T03_data_pipeline": {
+      "status": "done",
+      "owner": "codex-T03-pipeline",
+      "started_at": "2026-05-09T16:11:40+08:00",
+      "completed_at": "2026-05-09T16:17:47+08:00",
+      "depends_on": [
+        "T01_repo_stabilize"
+      ],
+      "task_file": ".codex/tasks/T03_data_pipeline.md",
+      "acceptance": [
+        "支持小样本处理",
+        "支持断点续跑",
+        "输出处理统计",
+        "给出是否需要 GPU 的估算依据"
+      ],
+      "files_changed": [
+        "data_pipeline/__init__.py",
+        "data_pipeline/database_manager.py",
+        "data_pipeline/llm_augment.py",
+        "data_pipeline/run_pipeline.py",
+        "docs/PIPELINE_RUNBOOK.md",
+        "capd_database.db",
+        "processed_corpus.txt",
+        ".codex/shared_state.json",
+        ".codex/logs/T03_result.md"
+      ],
+      "tests_run": [
+        "Get-ChildItem -Path data_pipeline,server -Filter *.py | ForEach-Object { python -m py_compile $_.FullName; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } (passed)",
+        "python -m data_pipeline.run_pipeline --help (passed)",
+        "python -c \"import data_pipeline.llm_augment; print('llm import ok')\" (passed)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --resume --scorer heuristic --no-augment --output processed_corpus.txt (passed; skipped 20 existing rows)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --scorer heuristic --no-augment --output processed_corpus.txt (passed; processed 20, skipped 20 duplicate rows, failed 0)",
+        "python -c \"import sqlite3; conn=sqlite3.connect('capd_database.db'); print(conn.execute('select count(*) from pipeline_runs').fetchone()[0]); print(conn.execute('select id, status, scorer, processed_count, success_count, skipped_count, failed_count from pipeline_runs order by id desc limit 3').fetchall()); print(conn.execute('pragma table_info(sentences)').fetchall()); conn.close()\" (passed)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --resume --scorer heuristic --no-augment --db-path .codex\\tmp\\t03_smoke.db --output .codex\\tmp\\t03_processed.tsv (failed: Python permission denied creating .codex\\tmp)",
+        "python -m data_pipeline.run_pipeline --limit 20 --batch-size 8 --resume --scorer heuristic --no-augment --db-path .codex\\logs\\t03_smoke.db --output .codex\\logs\\t03_processed.tsv (failed: Python permission denied opening new DB under .codex\\logs)"
+      ]
+    },
+    "T04_audio_noise": {
+      "status": "done",
+      "owner": "codex-T04-audio",
+      "started_at": "2026-05-09T17:20:00+08:00",
+      "completed_at": "2026-05-09T17:40:00+08:00",
+      "depends_on": [
+        "T02_api_contract"
+      ],
+      "task_file": ".codex/tasks/T04_audio_noise.md",
+      "acceptance": [
+        "支持至少 3 种 noise profile",
+        "fade in/out",
+        "RMS 归一化",
+        "API 可选择 noise profile"
+      ],
+      "files_changed": [
+        "server/audio_service.py",
+        "server/noise_profiles.py",
+        "server/main.py",
+        "docs/API_CONTRACT.md",
+        "docs/openapi-draft.yaml",
+        "assets/t04_smoke_cafe.wav",
+        ".codex/shared_state.json",
+        ".codex/logs/T04_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server (passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "python -c \"from server.noise_profiles import SUPPORTED_NOISE_PROFILES; print(SUPPORTED_NOISE_PROFILES)\" (passed)",
+        "python -c smoke test using mix_with_snr to generate assets/t04_smoke_cafe.wav; exists=True, rms=0.119371, peak=0.323512, silent=False, clipped=False (passed)",
+        "AudioService.generate_task_audio smoke with monkeypatched local TTS/librosa input; profile=street, sample_rate=16000, rms=0.119272, peak=0.260223, silent=False, clipped=False (passed)"
+      ]
+    },
+    "T05_user_data": {
+      "status": "done",
+      "owner": "codex-T05-user-data",
+      "started_at": "2026-05-09T16:45:00+08:00",
+      "completed_at": "2026-05-09T17:05:00+08:00",
+      "depends_on": [
+        "T02_api_contract"
+      ],
+      "task_file": ".codex/tasks/T05_user_data.md",
+      "acceptance": [
+        "用户、会话、答案、进度可持久化",
+        "提交答案后写数据库",
+        "提供进度查询接口"
+      ],
+      "files_changed": [
+        "server/main.py",
+        "server/user_data_store.py",
+        "docs/API_CONTRACT.md",
+        "docs/openapi-draft.yaml",
+        "capd_database.db",
+        ".codex/shared_state.json",
+        ".codex/logs/T05_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server (passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "python -c \"from fastapi.testclient import TestClient; from server.main import app; c=TestClient(app); s=c.post('/api/v1/sessions', json={'user_id':'demo_user_t05','training_mode':'LOW','noise_profile':'none'}); print('session', s.status_code, s.json()); p=c.get('/api/v1/users/demo_user_t05/progress'); print('progress_before', p.status_code, p.json())\" (passed)",
+        "offline answer persistence smoke with inserted training_task and POST /api/v1/answers (passed)",
+        "SQLite schema/table count inspection (passed)"
+      ]
+    },
+    "T06_tests_docs_release": {
+      "status": "done",
+      "owner": "codex-T06-tests-docs-release",
+      "started_at": "2026-05-09T18:05:00+08:00",
+      "completed_at": "2026-05-09T18:25:00+08:00",
+      "depends_on": [
+        "T02_api_contract",
+        "T03_data_pipeline",
+        "T04_audio_noise",
+        "T05_user_data"
+      ],
+      "task_file": ".codex/tasks/T06_tests_docs_release.md",
+      "acceptance": [
+        "pytest 通过",
+        "curl smoke test 通过",
+        "README 和 API 文档可指导小程序接入",
+        "生成 DEMO_RUNBOOK.md"
+      ],
+      "files_changed": [
+        "requirements.txt",
+        "README.md",
+        "docs/API_CONTRACT.md",
+        "docs/DATABASE_SCHEMA.md",
+        "docs/DEMO_RUNBOOK.md",
+        ".codex/FUNCTIONAL_TEST_PLAN.md",
+        "scripts/api_smoke_test.ps1",
+        "scripts/api_smoke_test.sh",
+        "tests/conftest.py",
+        "tests/test_api_contract.py",
+        "tests/test_audio_noise_profiles.py",
+        "tests/test_database_schema.py",
+        "tests/test_pipeline_smoke.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T06_result.md"
+      ],
+      "tests_run": [
+        "python -m pip install -r requirements.txt (passed after approval; installed pytest)",
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 13 passed)",
+        "python -m data_pipeline.run_pipeline --help (passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)"
+      ]
+    },
+    "T07_static_frontend_shell": {
+      "status": "done",
+      "owner": "codex-T07-frontend-shell",
+      "started_at": "2026-05-09T21:00:00+08:00",
+      "completed_at": "2026-05-09T21:25:00+08:00",
+      "depends_on": [
+        "T06_tests_docs_release"
+      ],
+      "task_file": ".codex/tasks/T07_static_frontend_shell.md",
+      "acceptance": [
+        "GET / returns a local demo page",
+        "Basic responsive UI shell exists",
+        "Day/night theme toggle exists",
+        "Existing /api/v1 contract remains stable"
+      ],
+      "files_changed": [
+        "server/main.py",
+        "web/index.html",
+        "web/styles.css",
+        "web/app.js",
+        "tests/test_api_contract.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T07_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 14 passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "uvicorn HTTP smoke: GET / returned 200 and contained CAPD Training Demo; GET /web/styles.css returned 200 (passed)",
+        "Browser plugin open http://127.0.0.1:8000/ (blocked by client: net::ERR_BLOCKED_BY_CLIENT)"
+      ]
+    },
+    "T08_frontend_api_flow_demo": {
+      "status": "done",
+      "owner": "codex-T08-frontend-api-flow",
+      "started_at": "2026-05-09T20:26:23+08:00",
+      "completed_at": "2026-05-09T20:32:18+08:00",
+      "depends_on": [
+        "T07_static_frontend_shell"
+      ],
+      "task_file": ".codex/tasks/T08_frontend_api_flow_demo.md",
+      "acceptance": [
+        "Frontend can create session",
+        "Frontend can fetch next task",
+        "Frontend can play task audio",
+        "Frontend can submit answer and display progress",
+        "Frontend integration documentation exists"
+      ],
+      "files_changed": [
+        "web/index.html",
+        "web/styles.css",
+        "web/app.js",
+        "docs/FRONTEND_INTEGRATION.md",
+        "tests/test_api_contract.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T08_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 14 passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)"
+      ]
+    },
+    "T09_frontend_polish_and_accessibility": {
+      "status": "done",
+      "owner": "codex-T09-frontend-polish",
+      "started_at": "2026-05-09T20:48:56+08:00",
+      "completed_at": "2026-05-09T20:57:21+08:00",
+      "depends_on": [
+        "T08_frontend_api_flow_demo"
+      ],
+      "task_file": ".codex/tasks/T09_frontend_polish_and_accessibility.md",
+      "acceptance": [
+        "Day/night modes are visually polished",
+        "Loading/error/success/empty states are clear",
+        "Desktop and mobile layouts are usable",
+        "No text overlap or incoherent UI overlap"
+      ],
+      "files_changed": [
+        "web/index.html",
+        "web/styles.css",
+        "web/app.js",
+        ".codex/shared_state.json",
+        ".codex/logs/T09_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 14 passed; xonsh history permission warning emitted after success)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "FastAPI TestClient static route check for /, /web/app.js, and /web/styles.css (passed)"
+      ]
+    },
+    "T10_full_demo_acceptance": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T07_static_frontend_shell",
+        "T08_frontend_api_flow_demo",
+        "T09_frontend_polish_and_accessibility"
+      ],
+      "task_file": ".codex/tasks/T10_full_demo_acceptance.md",
+      "acceptance": [
+        "Automated tests pass",
+        "Local frontend demo flow passes",
+        "API smoke test passes",
+        "README and demo docs explain full frontend/backend run",
+        "Submit/no-submit file list is documented"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    }
+  }
+}

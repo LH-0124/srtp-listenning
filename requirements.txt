@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+torch
+transformers
+jieba
+librosa
+soundfile
+numpy
+scipy
+edge-tts
+python-multipart
+ltp
+python-dotenv
+pytest
