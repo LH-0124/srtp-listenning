@@ -24,7 +24,7 @@ Response `200`:
 
 ## 2. POST /api/v1/sessions
 
-Purpose: create an in-memory training session.
+Purpose: create a persistent training session.
 
 Request:
 
@@ -86,6 +86,7 @@ Notes:
 - `target_text` is returned during MVP development for scoring and debugging.
 - `audio_url` is an absolute URL generated from the request host.
 - `text_hash` is the SHA-256 hash of `target_text`.
+- The selected task is persisted in `training_tasks` before the response returns.
 
 Error responses:
 
@@ -122,6 +123,12 @@ Response `200`:
 
 Scoring rule for T02 MVP: exact string match after trimming whitespace.
 
+T05 persistence behavior:
+
+- A successful answer submission writes one row to `answers`.
+- The related `training_sessions` row stores the new `speed` and `snr`.
+- The user's `user_progress` row is updated with cumulative totals, accuracy, and current difficulty.
+
 Error responses:
 
 - `404`: session not found, or task does not belong to the session.
@@ -149,7 +156,17 @@ Response `200`:
 }
 ```
 
-T02 stores progress in process memory. Persistent user, session, answer, and progress tables are reserved for T05.
+Progress is read from persistent SQLite user data tables. Unknown users return an initialized zero-progress row with default difficulty.
+
+## Persistent User Data Tables
+
+T05 adds these idempotently with `CREATE TABLE IF NOT EXISTS`; existing `sentences`, `pipeline_runs`, and `pipeline_errors` data are preserved.
+
+- `users`: `id`, `user_id`, `nickname`, `created_at`.
+- `training_sessions`: `id`, `session_id`, `user_id`, `training_mode`, `noise_profile`, `speed`, `snr`, `created_at`, `ended_at`.
+- `training_tasks`: `id`, `task_id`, `session_id`, `sentence_id`, `target_text`, `audio_url`, `speed`, `snr`, `noise_profile`, `created_at`.
+- `answers`: `id`, `answer_id`, `session_id`, `task_id`, `user_input`, `target_text`, `correct`, `score`, `created_at`.
+- `user_progress`: `id`, `user_id`, `total_answers`, `correct_count`, `accuracy`, `current_speed`, `current_snr`, `updated_at`.
 
 ## 6. GET /openapi.json
 

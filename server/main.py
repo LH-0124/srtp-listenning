@@ -1,6 +1,5 @@
 import hashlib
 import os
-import sqlite3
 import uuid
 
 from fastapi import FastAPI, HTTPException, Request
@@ -20,6 +19,18 @@ from server.models import (
     TaskDifficulty,
     TaskResponse,
 )
+from server.user_data_store import (
+    create_training_session,
+    create_training_task,
+    get_latest_session_for_user,
+    get_training_session,
+    get_training_task,
+    get_user_progress as get_persisted_user_progress,
+    init_user_data_db,
+    record_answer,
+    select_sentence,
+    update_session_difficulty,
+)
 
 SERVICE_NAME = "srtp-capd-backend"
 SERVICE_VERSION = "0.1.0"
@@ -31,54 +42,77 @@ app = FastAPI(title="SRTP-CAPD Backend API", version=SERVICE_VERSION)
 
 os.makedirs(ASSETS_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=ASSETS_DIR), name="static")
+init_user_data_db(DB_PATH)
 
 sessions = {}
 tasks = {}
-user_progress = {}
 
 
 def _difficulty_from_state(state: PatientState) -> Difficulty:
     return Difficulty(speed=round(state.speed, 2), snr=round(state.snr, 2))
 
 
+def _state_from_values(speed: float, snr: float) -> PatientState:
+    state = PatientState()
+    state.speed = speed
+    state.snr = snr
+    return state
+
+
 def _get_session(session_id: str) -> dict:
-    if session_id not in sessions:
+    session = sessions.get(session_id)
+    if session:
+        return session
+
+    persisted = get_training_session(session_id, DB_PATH)
+    if persisted is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    return sessions[session_id]
+    state = _state_from_values(persisted["speed"], persisted["snr"])
+    session = {
+        "user_id": persisted["user_id"],
+        "state": state,
+        "training_mode": persisted["training_mode"],
+        "noise_profile": persisted["noise_profile"],
+    }
+    sessions[session_id] = session
+    return session
 
 
-def _select_sentence(training_mode: str) -> str:
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT text FROM sentences WHERE context_type=? ORDER BY RANDOM() LIMIT 1",
-            (training_mode,),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            cursor.execute("SELECT text FROM sentences ORDER BY RANDOM() LIMIT 1")
-            row = cursor.fetchone()
-    finally:
-        conn.close()
-
-    if not row:
+def _select_training_sentence(training_mode: str) -> dict:
+    row = select_sentence(training_mode, DB_PATH)
+    if row is None:
         raise HTTPException(
             status_code=503,
             detail="No training sentences available. Please run data pipeline first.",
         )
-    return row[0]
+    return row
 
 
-def _record_answer(user_id: str, is_correct: bool, state: PatientState) -> None:
-    progress = user_progress.setdefault(
-        user_id,
-        {"total_answers": 0, "correct_count": 0, "state": state},
+def _persist_answer(
+    *,
+    session_id: str,
+    task_id: str,
+    user_id: str,
+    user_input: str,
+    target_text: str,
+    is_correct: bool,
+    state: PatientState,
+) -> None:
+    score = 1.0 if is_correct else 0.0
+    update_session_difficulty(session_id, state.speed, state.snr, DB_PATH)
+    record_answer(
+        answer_id=str(uuid.uuid4()),
+        session_id=session_id,
+        task_id=task_id,
+        user_id=user_id,
+        user_input=user_input,
+        target_text=target_text,
+        correct=is_correct,
+        score=score,
+        current_speed=state.speed,
+        current_snr=state.snr,
+        db_path=DB_PATH,
     )
-    progress["total_answers"] += 1
-    if is_correct:
-        progress["correct_count"] += 1
-    progress["state"] = state
 
 
 def _answer_response(is_correct: bool, adjustment: dict) -> AnswerResponse:
@@ -103,16 +137,21 @@ def health() -> HealthResponse:
 def create_session(req: InitSessionRequest) -> SessionResponse:
     session_id = str(uuid.uuid4())
     state = PatientState()
+    create_training_session(
+        session_id=session_id,
+        user_id=req.user_id,
+        training_mode=req.training_mode,
+        noise_profile=req.noise_profile,
+        speed=state.speed,
+        snr=state.snr,
+        db_path=DB_PATH,
+    )
     sessions[session_id] = {
         "user_id": req.user_id,
         "state": state,
         "training_mode": req.training_mode,
         "noise_profile": req.noise_profile,
     }
-    user_progress.setdefault(
-        req.user_id,
-        {"total_answers": 0, "correct_count": 0, "state": state},
-    )
 
     return SessionResponse(
         session_id=session_id,
@@ -126,23 +165,36 @@ def create_session(req: InitSessionRequest) -> SessionResponse:
 async def get_next_task_v1(session_id: str, request: Request) -> TaskResponse:
     session = _get_session(session_id)
     state = session["state"]
-    text = _select_sentence(session["training_mode"])
+    sentence = _select_training_sentence(session["training_mode"])
+    text = sentence["text"]
     filename = await AudioService.generate_task_audio(text, state.speed, state.snr)
     task_id = str(uuid.uuid4())
     text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    audio_url = str(request.url_for("static", path=filename))
 
     tasks[task_id] = {
         "session_id": session_id,
         "target_text": text,
         "text_hash": text_hash,
     }
+    create_training_task(
+        task_id=task_id,
+        session_id=session_id,
+        sentence_id=sentence["id"],
+        target_text=text,
+        audio_url=audio_url,
+        speed=state.speed,
+        snr=state.snr,
+        noise_profile=session["noise_profile"],
+        db_path=DB_PATH,
+    )
 
     return TaskResponse(
         task_id=task_id,
         session_id=session_id,
         text_hash=text_hash,
         target_text=text,
-        audio_url=str(request.url_for("static", path=filename)),
+        audio_url=audio_url,
         difficulty=TaskDifficulty(
             speed=round(state.speed, 2),
             snr=round(state.snr, 2),
@@ -155,32 +207,41 @@ async def get_next_task_v1(session_id: str, request: Request) -> TaskResponse:
 def submit_answer_v1(req: AnswerRequest) -> AnswerResponse:
     session = _get_session(req.session_id)
     task = tasks.get(req.task_id)
+    if task is None:
+        task = get_training_task(req.task_id, DB_PATH)
     if not task or task["session_id"] != req.session_id:
         raise HTTPException(status_code=404, detail="Task not found for session")
 
     state = session["state"]
     is_correct = req.user_input.strip() == task["target_text"].strip()
     adjustment = state.adjust(is_correct)
-    _record_answer(session["user_id"], is_correct, state)
+    _persist_answer(
+        session_id=req.session_id,
+        task_id=req.task_id,
+        user_id=session["user_id"],
+        user_input=req.user_input,
+        target_text=task["target_text"],
+        is_correct=is_correct,
+        state=state,
+    )
     return _answer_response(is_correct, adjustment)
 
 
 @app.get("/api/v1/users/{user_id}/progress", response_model=ProgressResponse)
 def get_user_progress(user_id: str) -> ProgressResponse:
-    progress = user_progress.get(user_id)
-    if progress is None:
-        progress = {"total_answers": 0, "correct_count": 0, "state": PatientState()}
-
+    progress = get_persisted_user_progress(user_id, DB_PATH)
     total_answers = progress["total_answers"]
     correct_count = progress["correct_count"]
-    accuracy = correct_count / total_answers if total_answers else 0.0
 
     return ProgressResponse(
         user_id=user_id,
         total_answers=total_answers,
         correct_count=correct_count,
-        accuracy=round(accuracy, 4),
-        current_difficulty=_difficulty_from_state(progress["state"]),
+        accuracy=round(progress["accuracy"], 4),
+        current_difficulty=Difficulty(
+            speed=round(progress["current_speed"], 2),
+            snr=round(progress["current_snr"], 2),
+        ),
     )
 
 
@@ -197,6 +258,9 @@ async def get_next_task(user_id: str, request: Request):
         None,
     )
     if session_id is None:
+        persisted = get_latest_session_for_user(user_id, DB_PATH)
+        session_id = persisted["session_id"] if persisted else None
+    if session_id is None:
         raise HTTPException(status_code=400, detail="User session not found")
     return await get_next_task_v1(session_id, request)
 
@@ -208,11 +272,34 @@ def submit_answer(req: LegacyAnswerRequest):
         None,
     )
     if session_id is None:
+        persisted = get_latest_session_for_user(req.user_id, DB_PATH)
+        session_id = persisted["session_id"] if persisted else None
+    if session_id is None:
         raise HTTPException(status_code=400, detail="Session not found")
 
-    session = sessions[session_id]
+    session = _get_session(session_id)
     state = session["state"]
     is_correct = req.user_input.strip() == req.target_text.strip()
     adjustment = state.adjust(is_correct)
-    _record_answer(req.user_id, is_correct, state)
+    task_id = str(uuid.uuid4())
+    create_training_task(
+        task_id=task_id,
+        session_id=session_id,
+        sentence_id=None,
+        target_text=req.target_text,
+        audio_url=None,
+        speed=state.speed,
+        snr=state.snr,
+        noise_profile=session["noise_profile"],
+        db_path=DB_PATH,
+    )
+    _persist_answer(
+        session_id=session_id,
+        task_id=task_id,
+        user_id=req.user_id,
+        user_input=req.user_input,
+        target_text=req.target_text,
+        is_correct=is_correct,
+        state=state,
+    )
     return _answer_response(is_correct, adjustment)
