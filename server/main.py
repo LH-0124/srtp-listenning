@@ -167,7 +167,12 @@ async def get_next_task_v1(session_id: str, request: Request) -> TaskResponse:
     state = session["state"]
     sentence = _select_training_sentence(session["training_mode"])
     text = sentence["text"]
-    filename = await AudioService.generate_task_audio(text, state.speed, state.snr)
+    filename = await AudioService.generate_task_audio(
+        text,
+        state.speed,
+        state.snr,
+        noise_profile=session["noise_profile"],
+    )
     task_id = str(uuid.uuid4())
     text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
     audio_url = str(request.url_for("static", path=filename))

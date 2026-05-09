@@ -2,13 +2,13 @@
   "project_id": "srtp-capd",
   "project_name": "面向听觉障碍人群的语音识别康复系统",
   "state_version": 1,
-  "current_state": "S4_PIPELINE_SMOKE_READY",
-  "completion_percent_estimate": 74,
+  "current_state": "S5_AUDIO_NOISE_READY",
+  "completion_percent_estimate": 82,
   "budget_remaining_cny": 700,
   "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
-  "last_updated_at": "2026-05-09T17:05:00+08:00",
-  "last_updated_by": "codex-T05-user-data",
-  "state_notes": "T05 completed; users, training_sessions, training_tasks, answers, and user_progress are persisted in SQLite. API response fields remain compatible with T02.",
+  "last_updated_at": "2026-05-09T17:40:00+08:00",
+  "last_updated_by": "codex-T04-audio",
+  "state_notes": "T04 completed; configurable deterministic noise profiles, fade in/out, RMS normalization, and peak limiting are implemented without changing API response fields.",
   "global_constraints": [
     "不要提交 API Key 或真实用户数据",
     "先做小样本 smoke test，再决定是否租 GPU",
@@ -35,7 +35,7 @@
     {
       "id": "RISK_NOISE_UNNATURAL",
       "level": "medium",
-      "description": "当前白噪声方式可能突兀，不适合训练体验。"
+      "description": "当基础 profile/fade/RMS 已完成，主观听感留给 T06 评估；如果过于不自然，可能需要调整参数或增加更复杂的处理（如频域滤波）。"
     }
   ],
   "tasks": {
@@ -166,8 +166,10 @@
       ]
     },
     "T04_audio_noise": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T04-audio",
+      "started_at": "2026-05-09T17:20:00+08:00",
+      "completed_at": "2026-05-09T17:40:00+08:00",
       "depends_on": [
         "T02_api_contract"
       ],
@@ -178,8 +180,23 @@
         "RMS 归一化",
         "API 可选择 noise profile"
       ],
-      "files_changed": [],
-      "tests_run": []
+      "files_changed": [
+        "server/audio_service.py",
+        "server/noise_profiles.py",
+        "server/main.py",
+        "docs/API_CONTRACT.md",
+        "docs/openapi-draft.yaml",
+        "assets/t04_smoke_cafe.wav",
+        ".codex/shared_state.json",
+        ".codex/logs/T04_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server (passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "python -c \"from server.noise_profiles import SUPPORTED_NOISE_PROFILES; print(SUPPORTED_NOISE_PROFILES)\" (passed)",
+        "python -c smoke test using mix_with_snr to generate assets/t04_smoke_cafe.wav; exists=True, rms=0.119371, peak=0.323512, silent=False, clipped=False (passed)",
+        "AudioService.generate_task_audio smoke with monkeypatched local TTS/librosa input; profile=street, sample_rate=16000, rms=0.119272, peak=0.260223, silent=False, clipped=False (passed)"
+      ]
     },
     "T05_user_data": {
       "status": "done",

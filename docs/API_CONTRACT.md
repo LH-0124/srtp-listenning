@@ -87,6 +87,7 @@ Notes:
 - `audio_url` is an absolute URL generated from the request host.
 - `text_hash` is the SHA-256 hash of `target_text`.
 - The selected task is persisted in `training_tasks` before the response returns.
+- `noise_profile` is applied during audio generation. Non-`none` profiles are mixed to the requested SNR with deterministic synthetic noise, short fade in/out, RMS normalization, and peak limiting.
 
 Error responses:
 

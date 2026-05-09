@@ -199,5 +199,6 @@ components:
           $ref: "#/components/schemas/Difficulty"
     NoiseProfile:
       type: string
+      description: Audio noise profile used during task audio generation. Non-none profiles are mixed with deterministic synthetic noise, fade in/out, RMS normalization, and peak limiting.
       enum: [none, white, cafe, street, speech_babble]
       default: none
