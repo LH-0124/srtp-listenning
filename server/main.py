@@ -11,6 +11,7 @@ app = FastAPI()
 # 挂载 assets 目录，让前端可以通过 URL 访问音频
 # 例如: http://localhost:8000/static/task_xxx.wav
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets')
+os.makedirs(ASSETS_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=ASSETS_DIR), name="static")
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'capd_database.db')

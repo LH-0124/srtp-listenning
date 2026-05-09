@@ -2,19 +2,21 @@ import os
 import requests
 import json
 from typing import List
+from dotenv import load_dotenv
 
 # --- 1. 配置和常量 ---
 
-# 1. 如果环境变量找不到，则默认API_KEY为“xxx”
-# **注意：实际使用时，请将环境变量设置为您的真实 Key，否则 API 调用会失败。
+# 加载 .env 文件中的环境变量
+load_dotenv()
 
-# API Key 示例（请替换为您的实际 Key）
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-KvnrHw7FoWZ2qhbUigpEREg7WpU7bUfiAksj6eL0Gymo6YLW")
+# API Key 
+# 安全获取，如果没配置则报错提醒
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY is not set")
 
-
-# GPT_API_URL = "https://api.openai.com/v1/chat/completions"
-GPT_API_URL = "https://api.chatanywhere.tech/v1/chat/completions"
-GPT_MODEL = "gpt-3.5-turbo" 
+GPT_API_URL = os.getenv("GPT_API_URL", "https://api.openai.com/v1/chat/completions")
+GPT_MODEL = os.getenv("GPT_MODEL", "gpt-3.5-turbo")
 
 OUTPUT_FILENAME = "similar_sentences_output.txt"
 
@@ -29,12 +31,6 @@ def generate_similar_sentences(seed_sentence: str, num_variants: int = 3) -> Lis
     Returns:
         一个包含仿写句子的列表。
     """
-    # 如果API不对给出适当的输出 (预检查)
-    #if OPENAI_API_KEY == "xxx":
-    #    error_msg = "❌ 警告：API Key 未设置。请设置 OPENAI_API_KEY 环境变量或替换代码中的默认值。"
-    #    print(error_msg)
-    #   return [error_msg]
-    
     # a.构建发送给 GPT 的提示词 (Prompt)
     prompt = f"""
     请仿照以下句子的句式和结构，根据其内容，生成 {num_variants} 个结构相似但措辞不同的新句子。

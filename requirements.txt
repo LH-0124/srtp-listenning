@@ -11,3 +11,4 @@ scipy
 edge-tts
 python-multipart
 ltp
+python-dotenv

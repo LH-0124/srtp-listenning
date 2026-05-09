@@ -2,13 +2,13 @@
   "project_id": "srtp-capd",
   "project_name": "面向听觉障碍人群的语音识别康复系统",
   "state_version": 1,
-  "current_state": "S0_DISCOVERED",
-  "completion_percent_estimate": 45,
+  "current_state": "S1_REPO_STABILIZED",
+  "completion_percent_estimate": 50,
   "budget_remaining_cny": 700,
   "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
-  "last_updated_at": "2026-05-05T21:28:47+08:00",
-  "last_updated_by": "codex-T00-audit",
-  "state_notes": "T00 audit completed; report generated; py_compile passed via PowerShell file enumeration; dependency install passed after escalation; server.main import smoke passed; hardcoded API key found.",
+  "last_updated_at": "2026-05-05T22:19:06+08:00",
+  "last_updated_by": "codex-T01-repo",
+  "state_notes": "T01 completed; hardcoded API key removed; .env.example added; python-dotenv confirmed; compileall passed; server import and uvicorn smoke passed.",
   "global_constraints": [
     "不要提交 API Key 或真实用户数据",
     "先做小样本 smoke test，再决定是否租 GPU",
@@ -19,8 +19,8 @@
   "known_risks": [
     {
       "id": "RISK_SECRET_COMMITTED",
-      "level": "critical",
-      "description": "llm_augment.py 中疑似存在硬编码 API Key，必须立即移除并吊销旧 key。"
+      "level": "resolved",
+      "description": "T01 已移除 llm_augment.py 中的硬编码 API Key；用户已撤销旧 key。后续仍需避免提交 .env 或真实密钥。"
     },
     {
       "id": "RISK_PIPELINE_NOT_RUN",
@@ -65,8 +65,10 @@
       ]
     },
     "T01_repo_stabilize": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T01-repo",
+      "started_at": "2026-05-05T21:59:56+08:00",
+      "completed_at": "2026-05-05T22:19:06+08:00",
       "depends_on": [
         "T00_repo_audit"
       ],
@@ -77,8 +79,25 @@
         "增加 .env.example",
         "启动命令可执行"
       ],
-      "files_changed": [],
-      "tests_run": []
+      "files_changed": [
+        ".env.example",
+        ".gitignore",
+        "data_pipeline/llm_augment.py",
+        "server/main.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T01_result.md"
+      ],
+      "tests_run": [
+        "rg -n '^python-dotenv$' requirements.txt (passed)",
+        "secret scan with rg excluding .env, .codex/logs, raw_data, binary audio, and pyc files (passed: no hardcoded secrets found)",
+        "python -m compileall -q data_pipeline server (passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "bash -lc \"python -m py_compile data_pipeline/*.py server/*.py\" (failed: Windows denied Bash/WSL instance creation)",
+        "python -m py_compile data_pipeline/*.py server/*.py (failed in PowerShell because wildcard was not expanded)",
+        "Get-ChildItem -Path data_pipeline,server -Filter *.py | ForEach-Object { python -m py_compile $_.FullName; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } (passed)",
+        "python -m uvicorn server.main:app --host 127.0.0.1 --port 8011 (short smoke passed)",
+        "python -m uvicorn server.main:app --reload --host 127.0.0.1 --port 8012 (short smoke passed)"
+      ]
     },
     "T02_api_contract": {
       "status": "not_started",
