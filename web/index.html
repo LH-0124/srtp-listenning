@@ -7,13 +7,15 @@
     <link rel="stylesheet" href="/web/styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#sessionTitle">Skip to training controls</a>
     <header class="topbar">
       <div>
         <p class="eyebrow">SRTP-CAPD Backend MVP</p>
         <h1>CAPD Training Demo</h1>
+        <p class="topbar-subtitle">Local mini program flow: session, task audio, answer, progress.</p>
       </div>
       <button class="theme-toggle" type="button" id="themeToggle" aria-pressed="false">
-        <span class="theme-icon" aria-hidden="true">Moon</span>
+        <span class="theme-icon" aria-hidden="true">Dark</span>
         <span id="themeLabel">Dark mode</span>
       </button>
     </header>
@@ -21,8 +23,11 @@
     <main class="app-shell">
       <section class="panel session-panel" aria-labelledby="sessionTitle">
         <div class="panel-heading">
-          <p class="section-kicker">Session</p>
-          <h2 id="sessionTitle">Session setup</h2>
+          <div>
+            <p class="section-kicker">Session</p>
+            <h2 id="sessionTitle">Session setup</h2>
+          </div>
+          <span class="state-pill empty" id="sessionState">Not started</span>
         </div>
         <form class="control-grid" id="sessionForm">
           <label>
@@ -50,6 +55,9 @@
           <button class="secondary-action" type="button" id="nextTaskBtn" disabled>Next task</button>
           <button class="secondary-action" type="button" id="refreshProgressBtn">Refresh progress</button>
         </form>
+        <p class="helper-text" id="sessionHelp">
+          Create a session first. The same session is kept if task audio generation fails.
+        </p>
         <dl class="detail-list">
           <div><dt>Session ID</dt><dd id="sessionId">None</dd></div>
           <div><dt>User</dt><dd id="sessionUser">demo_user</dd></div>
@@ -59,10 +67,13 @@
 
       <section class="panel task-panel" aria-labelledby="taskTitle">
         <div class="panel-heading">
-          <p class="section-kicker">Task</p>
-          <h2 id="taskTitle">Task and audio</h2>
+          <div>
+            <p class="section-kicker">Task</p>
+            <h2 id="taskTitle">Task and audio</h2>
+          </div>
+          <span class="state-pill empty" id="taskState">Empty</span>
         </div>
-        <div class="audio-box">
+        <div class="audio-box is-empty" id="audioBox">
           <div class="wave-bars" aria-hidden="true">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
@@ -92,14 +103,18 @@
 
       <section class="panel answer-panel" aria-labelledby="answerTitle">
         <div class="panel-heading">
-          <p class="section-kicker">Answer</p>
-          <h2 id="answerTitle">Dictation input</h2>
+          <div>
+            <p class="section-kicker">Answer</p>
+            <h2 id="answerTitle">Dictation input</h2>
+          </div>
+          <span class="state-pill empty" id="answerState">Waiting</span>
         </div>
         <form id="answerForm">
           <label>
             User response
-            <textarea id="userInput" placeholder="Type what you heard from the audio" disabled></textarea>
+            <textarea id="userInput" placeholder="Type what you heard from the audio" disabled aria-describedby="answerHelp"></textarea>
           </label>
+          <p class="helper-text" id="answerHelp">The MVP shows target text for demo/debugging, but answer submission still uses the real API.</p>
           <button class="primary-action" type="submit" id="submitAnswerBtn" disabled>
             Submit answer
           </button>
@@ -114,8 +129,11 @@
 
       <section class="panel progress-panel" aria-labelledby="progressTitle">
         <div class="panel-heading">
-          <p class="section-kicker">Progress</p>
-          <h2 id="progressTitle">Training progress</h2>
+          <div>
+            <p class="section-kicker">Progress</p>
+            <h2 id="progressTitle">Training progress</h2>
+          </div>
+          <span class="state-pill success" id="progressState">Ready</span>
         </div>
         <div class="progress-card">
           <strong id="accuracyValue">0%</strong>
@@ -130,10 +148,13 @@
 
       <aside class="panel api-panel" aria-labelledby="apiStatusTitle">
         <div class="panel-heading">
-          <p class="section-kicker">API</p>
-          <h2 id="apiStatusTitle">API status</h2>
+          <div>
+            <p class="section-kicker">API</p>
+            <h2 id="apiStatusTitle">API status</h2>
+          </div>
+          <span class="state-pill empty" id="apiState">Idle</span>
         </div>
-        <div class="status-line">
+        <div class="status-line" aria-live="polite">
           <span class="status-dot" id="apiStatusDot" aria-hidden="true"></span>
           <span id="apiStatus">Ready. Create a session to begin.</span>
         </div>
@@ -144,6 +165,16 @@
           <li id="endpointAnswer">POST /api/v1/answers</li>
           <li id="endpointProgress">GET /api/v1/users/{user_id}/progress</li>
         </ul>
+        <div class="debug-grid" aria-label="Latest API debug information">
+          <div>
+            <h3>Latest request</h3>
+            <pre id="lastRequest">No API request yet.</pre>
+          </div>
+          <div>
+            <h3>Latest response</h3>
+            <pre id="lastResponse">No API response yet.</pre>
+          </div>
+        </div>
       </aside>
     </main>
 
