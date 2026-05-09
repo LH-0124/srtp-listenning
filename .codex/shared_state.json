@@ -2,13 +2,13 @@
   "project_id": "srtp-capd",
   "project_name": "面向听觉障碍人群的语音识别康复系统",
   "state_version": 1,
-  "current_state": "S5_AUDIO_NOISE_READY",
-  "completion_percent_estimate": 82,
+  "current_state": "S6_TESTS_READY",
+  "completion_percent_estimate": 90,
   "budget_remaining_cny": 700,
   "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
-  "last_updated_at": "2026-05-09T17:40:00+08:00",
-  "last_updated_by": "codex-T04-audio",
-  "state_notes": "T04 completed; configurable deterministic noise profiles, fade in/out, RMS normalization, and peak limiting are implemented without changing API response fields.",
+  "last_updated_at": "2026-05-09T20:05:19+08:00",
+  "last_updated_by": "codex-next-phase-planner",
+  "state_notes": "T06 completed; next phase planned for local frontend demo and full frontend/backend integration. See docs/NEXT_PHASE_PLAN.md and tasks T07-T10.",
   "global_constraints": [
     "不要提交 API Key 或真实用户数据",
     "先做小样本 smoke test，再决定是否租 GPU",
@@ -230,8 +230,10 @@
       ]
     },
     "T06_tests_docs_release": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T06-tests-docs-release",
+      "started_at": "2026-05-09T18:05:00+08:00",
+      "completed_at": "2026-05-09T18:25:00+08:00",
       "depends_on": [
         "T02_api_contract",
         "T03_data_pipeline",
@@ -244,6 +246,96 @@
         "curl smoke test 通过",
         "README 和 API 文档可指导小程序接入",
         "生成 DEMO_RUNBOOK.md"
+      ],
+      "files_changed": [
+        "requirements.txt",
+        "README.md",
+        "docs/API_CONTRACT.md",
+        "docs/DATABASE_SCHEMA.md",
+        "docs/DEMO_RUNBOOK.md",
+        ".codex/FUNCTIONAL_TEST_PLAN.md",
+        "scripts/api_smoke_test.ps1",
+        "scripts/api_smoke_test.sh",
+        "tests/conftest.py",
+        "tests/test_api_contract.py",
+        "tests/test_audio_noise_profiles.py",
+        "tests/test_database_schema.py",
+        "tests/test_pipeline_smoke.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T06_result.md"
+      ],
+      "tests_run": [
+        "python -m pip install -r requirements.txt (passed after approval; installed pytest)",
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 13 passed)",
+        "python -m data_pipeline.run_pipeline --help (passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)"
+      ]
+    },
+    "T07_static_frontend_shell": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T06_tests_docs_release"
+      ],
+      "task_file": ".codex/tasks/T07_static_frontend_shell.md",
+      "acceptance": [
+        "GET / returns a local demo page",
+        "Basic responsive UI shell exists",
+        "Day/night theme toggle exists",
+        "Existing /api/v1 contract remains stable"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T08_frontend_api_flow_demo": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T07_static_frontend_shell"
+      ],
+      "task_file": ".codex/tasks/T08_frontend_api_flow_demo.md",
+      "acceptance": [
+        "Frontend can create session",
+        "Frontend can fetch next task",
+        "Frontend can play task audio",
+        "Frontend can submit answer and display progress",
+        "Frontend integration documentation exists"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T09_frontend_polish_and_accessibility": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T08_frontend_api_flow_demo"
+      ],
+      "task_file": ".codex/tasks/T09_frontend_polish_and_accessibility.md",
+      "acceptance": [
+        "Day/night modes are visually polished",
+        "Loading/error/success/empty states are clear",
+        "Desktop and mobile layouts are usable",
+        "No text overlap or incoherent UI overlap"
+      ],
+      "files_changed": [],
+      "tests_run": []
+    },
+    "T10_full_demo_acceptance": {
+      "status": "not_started",
+      "owner": null,
+      "depends_on": [
+        "T07_static_frontend_shell",
+        "T08_frontend_api_flow_demo",
+        "T09_frontend_polish_and_accessibility"
+      ],
+      "task_file": ".codex/tasks/T10_full_demo_acceptance.md",
+      "acceptance": [
+        "Automated tests pass",
+        "Local frontend demo flow passes",
+        "API smoke test passes",
+        "README and demo docs explain full frontend/backend run",
+        "Submit/no-submit file list is documented"
       ],
       "files_changed": [],
       "tests_run": []

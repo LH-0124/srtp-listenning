@@ -177,3 +177,17 @@ FastAPI also serves interactive documentation at:
 
 - `/docs`
 - `/redoc`
+
+## Release Smoke Tests
+
+Before handing the API to mini program integration, run:
+
+```powershell
+python -m compileall -q data_pipeline server tests
+pytest -q
+python -c "import server.main; print('server import ok')"
+python -m uvicorn server.main:app --host 127.0.0.1 --port 8000
+.\scripts\api_smoke_test.ps1 -BaseUrl http://127.0.0.1:8000 -UserId smoke_user
+```
+
+The automated tests use a temporary SQLite database and monkeypatch online TTS, so they do not require network access or mutate `capd_database.db`.
