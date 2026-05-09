@@ -6,9 +6,9 @@
   "completion_percent_estimate": 90,
   "budget_remaining_cny": 700,
   "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
-  "last_updated_at": "2026-05-09T21:25:00+08:00",
-  "last_updated_by": "codex-T07-frontend-shell",
-  "state_notes": "T07 completed: root path now serves a static frontend shell; /api/v1 contract unchanged. Waiting for user confirmation before T08.",
+  "last_updated_at": "2026-05-09T20:32:18+08:00",
+  "last_updated_by": "codex-T08-frontend-api-flow",
+  "state_notes": "T08 completed: static frontend demo now drives the existing /api/v1 session/task/audio/answer/progress flow. Paused before T09.",
   "global_constraints": [
     "不要提交 API Key 或真实用户数据",
     "先做小样本 smoke test，再决定是否租 GPU",
@@ -305,8 +305,10 @@
       ]
     },
     "T08_frontend_api_flow_demo": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T08-frontend-api-flow",
+      "started_at": "2026-05-09T20:26:23+08:00",
+      "completed_at": "2026-05-09T20:32:18+08:00",
       "depends_on": [
         "T07_static_frontend_shell"
       ],
@@ -318,8 +320,20 @@
         "Frontend can submit answer and display progress",
         "Frontend integration documentation exists"
       ],
-      "files_changed": [],
-      "tests_run": []
+      "files_changed": [
+        "web/index.html",
+        "web/styles.css",
+        "web/app.js",
+        "docs/FRONTEND_INTEGRATION.md",
+        "tests/test_api_contract.py",
+        ".codex/shared_state.json",
+        ".codex/logs/T08_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 14 passed)",
+        "python -c \"import server.main; print('server import ok')\" (passed)"
+      ]
     },
     "T09_frontend_polish_and_accessibility": {
       "status": "not_started",

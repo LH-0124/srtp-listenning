@@ -24,31 +24,37 @@
           <p class="section-kicker">Session</p>
           <h2 id="sessionTitle">Session setup</h2>
         </div>
-        <form class="control-grid">
+        <form class="control-grid" id="sessionForm">
           <label>
             User ID
-            <input type="text" value="demo_user" disabled />
+            <input id="userId" name="user_id" type="text" value="demo_user" autocomplete="off" />
           </label>
           <label>
             Training mode
-            <select disabled>
-              <option>LOW</option>
-              <option>HIGH</option>
+            <select id="trainingMode" name="training_mode">
+              <option value="LOW">LOW</option>
+              <option value="HIGH">HIGH</option>
             </select>
           </label>
           <label>
             Noise profile
-            <select disabled>
-              <option>none</option>
-              <option>cafe</option>
-              <option>street</option>
-              <option>speech_babble</option>
+            <select id="noiseProfile" name="noise_profile">
+              <option value="none">none</option>
+              <option value="white">white</option>
+              <option value="cafe">cafe</option>
+              <option value="street">street</option>
+              <option value="speech_babble">speech_babble</option>
             </select>
           </label>
+          <button class="primary-action" type="submit" id="createSessionBtn">Create session</button>
+          <button class="secondary-action" type="button" id="nextTaskBtn" disabled>Next task</button>
+          <button class="secondary-action" type="button" id="refreshProgressBtn">Refresh progress</button>
         </form>
-        <div class="placeholder-note">
-          T07 builds the static shell. API calls are wired in T08.
-        </div>
+        <dl class="detail-list">
+          <div><dt>Session ID</dt><dd id="sessionId">None</dd></div>
+          <div><dt>User</dt><dd id="sessionUser">demo_user</dd></div>
+          <div><dt>Mode</dt><dd id="sessionMode">LOW</dd></div>
+        </dl>
       </section>
 
       <section class="panel task-panel" aria-labelledby="taskTitle">
@@ -56,25 +62,31 @@
           <p class="section-kicker">Task</p>
           <h2 id="taskTitle">Task and audio</h2>
         </div>
-        <div class="audio-placeholder" role="img" aria-label="Audio player placeholder">
+        <div class="audio-box">
           <div class="wave-bars" aria-hidden="true">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
-          <p>Waiting for training audio</p>
+          <audio id="taskAudio" controls preload="none"></audio>
+          <p id="audioHint">Create a session, then request the next task.</p>
         </div>
         <dl class="metric-row">
           <div>
             <dt>Speed</dt>
-            <dd>1.00x</dd>
+            <dd id="taskSpeed">1.00x</dd>
           </div>
           <div>
             <dt>SNR</dt>
-            <dd>20 dB</dd>
+            <dd id="taskSnr">20 dB</dd>
           </div>
           <div>
-            <dt>Status</dt>
-            <dd>Idle</dd>
+            <dt>Noise</dt>
+            <dd id="taskNoise">none</dd>
           </div>
+        </dl>
+        <dl class="detail-list">
+          <div><dt>Task ID</dt><dd id="taskId">None</dd></div>
+          <div><dt>Text hash</dt><dd id="textHash">None</dd></div>
+          <div><dt>MVP target text</dt><dd id="targetText">Hidden until a task is loaded</dd></div>
         </dl>
       </section>
 
@@ -83,11 +95,21 @@
           <p class="section-kicker">Answer</p>
           <h2 id="answerTitle">Dictation input</h2>
         </div>
-        <label>
-          User response
-          <textarea placeholder="T08 will submit answers from here" disabled></textarea>
-        </label>
-        <button class="primary-action" type="button" disabled>Submit answer</button>
+        <form id="answerForm">
+          <label>
+            User response
+            <textarea id="userInput" placeholder="Type what you heard from the audio" disabled></textarea>
+          </label>
+          <button class="primary-action" type="submit" id="submitAnswerBtn" disabled>
+            Submit answer
+          </button>
+        </form>
+        <dl class="detail-list">
+          <div><dt>Correct</dt><dd id="answerCorrect">None</dd></div>
+          <div><dt>Score</dt><dd id="answerScore">None</dd></div>
+          <div><dt>New difficulty</dt><dd id="answerDifficulty">None</dd></div>
+          <div><dt>Message</dt><dd id="answerMessage">Waiting for answer</dd></div>
+        </dl>
       </section>
 
       <section class="panel progress-panel" aria-labelledby="progressTitle">
@@ -96,13 +118,13 @@
           <h2 id="progressTitle">Training progress</h2>
         </div>
         <div class="progress-card">
-          <strong>0%</strong>
+          <strong id="accuracyValue">0%</strong>
           <span>Accuracy</span>
         </div>
         <dl class="progress-list">
-          <div><dt>Answered</dt><dd>0</dd></div>
-          <div><dt>Correct</dt><dd>0</dd></div>
-          <div><dt>Difficulty</dt><dd>Base</dd></div>
+          <div><dt>Answered</dt><dd id="totalAnswers">0</dd></div>
+          <div><dt>Correct</dt><dd id="correctCount">0</dd></div>
+          <div><dt>Difficulty</dt><dd id="progressDifficulty">1.00x / 20 dB</dd></div>
         </dl>
       </section>
 
@@ -112,14 +134,15 @@
           <h2 id="apiStatusTitle">API status</h2>
         </div>
         <div class="status-line">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span id="apiStatus">Static shell loaded. Waiting for T08 /api/v1 wiring.</span>
+          <span class="status-dot" id="apiStatusDot" aria-hidden="true"></span>
+          <span id="apiStatus">Ready. Create a session to begin.</span>
         </div>
+        <p class="error-text" id="errorText" role="alert"></p>
         <ul class="api-list" aria-label="Core API endpoints">
-          <li>POST /api/v1/sessions</li>
-          <li>GET /api/v1/tasks/next</li>
-          <li>POST /api/v1/answers</li>
-          <li>GET /api/v1/users/{user_id}/progress</li>
+          <li id="endpointSession">POST /api/v1/sessions</li>
+          <li id="endpointTask">GET /api/v1/tasks/next</li>
+          <li id="endpointAnswer">POST /api/v1/answers</li>
+          <li id="endpointProgress">GET /api/v1/users/{user_id}/progress</li>
         </ul>
       </aside>
     </main>

@@ -38,6 +38,11 @@ def test_root_serves_static_frontend_shell(api_client):
     script = client.get("/web/app.js")
     assert script.status_code == 200
     assert "capd-demo-theme" in script.text
+    assert "/api/v1/sessions" in script.text
+    assert "/api/v1/tasks/next" in script.text
+    assert "/api/v1/answers" in script.text
+    assert "/api/v1/users/" in script.text
+    assert "Audio could not be generated" in script.text
 
 
 def test_session_task_answer_progress_persistence(api_client):
