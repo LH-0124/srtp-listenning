@@ -1,190 +1,177 @@
-# STATE_MACHINE.md — 项目状态流转文件
+# STATE_MACHINE.md - SRTP-CAPD Project State Machine
 
-本文定义整个项目从当前半成品状态推进到可演示后端 MVP 的状态机。
+This document describes the working state model used by Codex tasks in this repository.
 
-## 1. 状态枚举
+## 1. State Flow
 
 ```text
 S0_DISCOVERED
-  ↓
-S1_REPO_STABILIZED
-  ↓
-S2_API_CONTRACT_READY
-  ↓
-S3_USER_DATA_READY
-  ↓
-S4_PIPELINE_SMOKE_READY
-  ↓
-S5_AUDIO_NOISE_READY
-  ↓
-S6_TESTS_READY
-  ↓
-S7_MINIPROGRAM_BACKEND_READY
-  ↓
-S8_DEMO_READY
+  -> S1_REPO_STABILIZED
+  -> S2_API_CONTRACT_READY
+  -> S3_USER_DATA_READY
+  -> S4_PIPELINE_SMOKE_READY
+  -> S5_AUDIO_NOISE_READY
+  -> S6_TESTS_READY
+  -> S7_MINIPROGRAM_BACKEND_READY
+  -> S8_DEMO_READY
 ```
 
-## 2. 状态定义
+Current practical state after T10: `S8_DEMO_READY`.
+
+`.codex/shared_state.json` may still contain historical task metadata and older state labels, but the latest task log is `.codex/logs/T10_result.md`.
+
+## 2. State Definitions
 
 ### S0_DISCOVERED
 
-当前状态。仓库已有初步代码，但不保证可运行、可测试、可对接。
+Initial repository audit is complete.
 
-进入条件：
+Expected evidence:
 
-- 已读取仓库；
-- 已确认目录结构；
-- 已记录已知风险。
+- repository structure reviewed;
+- major risks listed;
+- `docs/AUDIT_REPORT.md` created.
 
-退出条件：
-
-- `T00_repo_audit` 完成；
-- 生成 `docs/AUDIT_REPORT.md`。
+Related task: `T00_repo_audit`.
 
 ### S1_REPO_STABILIZED
 
-仓库能被正常安装、编译、启动。
+Basic repository safety and importability are in place.
 
-进入条件：
+Expected evidence:
 
-- `python -m py_compile data_pipeline/*.py server/*.py` 通过；
-- API Key 已移出代码；
-- `.env.example` 已存在；
-- assets 目录自动创建。
+- Python files compile;
+- hardcoded secrets removed;
+- `.env.example` exists;
+- generated assets are ignored.
 
-退出条件：
-
-- `T01_repo_stabilize` 完成；
-- smoke start 命令能执行。
+Related task: `T01_repo_stabilize`.
 
 ### S2_API_CONTRACT_READY
 
-面向小程序的 API 契约稳定。
+Stable mini program API contract exists.
 
-进入条件：
+Expected evidence:
 
-- `/health` 可访问；
-- `/api/v1/sessions` 可创建会话；
-- `/api/v1/tasks/next` 可拿题；
-- `/api/v1/answers` 可提交答案；
-- `/openapi.json` 可导出；
-- `docs/API_CONTRACT.md` 已更新。
+- `GET /health`;
+- `POST /api/v1/sessions`;
+- `GET /api/v1/tasks/next`;
+- `POST /api/v1/answers`;
+- `GET /api/v1/users/{user_id}/progress`;
+- `GET /openapi.json`;
+- `docs/API_CONTRACT.md` updated.
 
-退出条件：
-
-- `T02_api_contract` 完成。
+Related task: `T02_api_contract`.
 
 ### S3_USER_DATA_READY
 
-用户、会话、答题、进度可持久化。
+Persistent user/session/task/answer/progress storage exists.
 
-进入条件：
+Expected evidence:
 
-- 数据库包含 users、sessions、answers、progress 或等价结构；
-- 每次提交答案后能记录；
-- 能查询用户训练进度。
+- SQLite tables for users, sessions, tasks, answers, and progress;
+- idempotent schema initialization;
+- answer submission updates progress.
 
-退出条件：
-
-- `T05_user_data` 完成。
+Related task: `T05_user_data`.
 
 ### S4_PIPELINE_SMOKE_READY
 
-语料 pipeline 能小样本跑通并可估算全量成本。
+Offline corpus processing has a resumable smoke path.
 
-进入条件：
+Expected evidence:
 
-- 可处理 20 / 100 / 500 条样本；
-- 有进度日志；
-- 有失败记录；
-- 支持断点续跑；
-- 能估算全量时间。
+- heuristic pipeline smoke works;
+- batch/resume options exist;
+- pipeline status and error records are stored;
+- large BERT/LTP/GPT runs remain gated by small-sample validation.
 
-退出条件：
-
-- `T03_data_pipeline` 完成。
+Related task: `T03_data_pipeline`.
 
 ### S5_AUDIO_NOISE_READY
 
-音频生成与噪声处理可用于演示。
+Audio generation supports difficulty and noise profile controls.
 
-进入条件：
+Expected evidence:
 
-- TTS 能生成音频；
-- 支持至少 3 种噪声 profile；
-- 噪声有 fade in/out，不突兀；
-- 输出音频 RMS 合理，无明显爆音。
+- online TTS integration;
+- supported noise profiles;
+- speed/SNR controls;
+- fade, normalization, and peak limiting;
+- deterministic synthetic noise where applicable.
 
-退出条件：
-
-- `T04_audio_noise` 完成。
+Related task: `T04_audio_noise`.
 
 ### S6_TESTS_READY
 
-核心功能有自动化测试和 smoke test。
+Automated validation and release documentation exist.
 
-进入条件：
+Expected evidence:
 
-- pytest 通过；
-- API smoke test 通过；
-- pipeline smoke test 通过；
-- 测试说明已写入 `.codex/FUNCTIONAL_TEST_PLAN.md`。
+- `python -m compileall -q data_pipeline server tests` passes;
+- `pytest -q` passes;
+- pipeline help or smoke path works;
+- API smoke scripts exist;
+- demo runbook exists.
 
-退出条件：
-
-- `T06_tests_docs_release` 完成。
+Related task: `T06_tests_docs_release`.
 
 ### S7_MINIPROGRAM_BACKEND_READY
 
-后端可以给小程序接入。
+Backend behavior is ready for mini program integration planning.
 
-进入条件：
+Expected evidence:
 
-- API 文档稳定；
-- CORS 配置明确；
-- 音频 URL 返回完整或可配置 base URL；
-- 用户数据可查询；
-- 演示数据库可用。
+- stable `/api/v1` contract;
+- OpenAPI export;
+- CORS and static audio URL behavior documented;
+- persistence behavior documented.
 
-退出条件：
-
-- 小程序端可按文档调用，或 curl 全流程通过。
+Related tasks: `T02`, `T05`, `T06`.
 
 ### S8_DEMO_READY
 
-最终可答辩/演示状态。
+Local end-to-end demo surface is available.
 
-进入条件：
+Expected evidence:
 
-- 一条命令启动；
-- 一套 demo 用户数据；
-- 一套 demo 语料；
-- 一套 demo 音频；
-- PPT 或说明文档可展示流程。
+- `GET /` serves the frontend demo;
+- frontend can create sessions;
+- frontend can request tasks and play audio when TTS/network is available;
+- frontend can submit answers and refresh progress when a task is available;
+- frontend preserves the session and shows clear task/audio errors when online TTS is blocked;
+- `/docs` and `/openapi.json` are available;
+- T10 acceptance log exists.
 
-## 3. 任务与状态映射
+Related tasks: `T07`, `T08`, `T09`, `T10`.
 
-| 任务 | 完成后推进到 |
-|---|---|
-| T00_repo_audit | S0_DISCOVERED 已确认 |
-| T01_repo_stabilize | S1_REPO_STABILIZED |
-| T02_api_contract | S2_API_CONTRACT_READY |
-| T05_user_data | S3_USER_DATA_READY |
-| T03_data_pipeline | S4_PIPELINE_SMOKE_READY |
-| T04_audio_noise | S5_AUDIO_NOISE_READY |
-| T06_tests_docs_release | S6/S7/S8 |
+## 3. Task To State Mapping
 
-## 4. 状态更新规则
+| Task | State contribution |
+| --- | --- |
+| `T00_repo_audit` | `S0_DISCOVERED` |
+| `T01_repo_stabilize` | `S1_REPO_STABILIZED` |
+| `T02_api_contract` | `S2_API_CONTRACT_READY`, part of `S7_MINIPROGRAM_BACKEND_READY` |
+| `T05_user_data` | `S3_USER_DATA_READY`, part of `S7_MINIPROGRAM_BACKEND_READY` |
+| `T03_data_pipeline` | `S4_PIPELINE_SMOKE_READY` |
+| `T04_audio_noise` | `S5_AUDIO_NOISE_READY` |
+| `T06_tests_docs_release` | `S6_TESTS_READY`, part of `S7_MINIPROGRAM_BACKEND_READY` |
+| `T07_static_frontend_shell` | part of `S8_DEMO_READY` |
+| `T08_frontend_api_flow_demo` | part of `S8_DEMO_READY` |
+| `T09_frontend_polish_and_accessibility` | part of `S8_DEMO_READY` |
+| `T10_full_demo_acceptance` | final local demo acceptance for `S8_DEMO_READY` |
 
-所有 Codex 进程结束时都要更新 `.codex/shared_state.json`：
+## 4. State Update Format
+
+When a task changes the project state, update `.codex/shared_state.json` with fields like:
 
 ```json
 {
-  "current_state": "S1_REPO_STABILIZED",
-  "last_updated_by": "codex-T01-repo",
-  "last_updated_at": "2026-05-05T21:30:00+08:00",
-  "state_notes": "py_compile passed; secrets moved to .env.example"
+  "current_state": "S8_DEMO_READY",
+  "last_updated_by": "codex-T10-full-demo-acceptance",
+  "last_updated_at": "2026-05-10T16:50:24+08:00",
+  "state_notes": "T10 completed: automated tests and static/demo routes passed; real task/audio/API smoke is limited by online edge-tts network failure in this environment."
 }
 ```
 
-禁止只改代码不更新状态。
+Also write a task result file under `.codex/logs/`.

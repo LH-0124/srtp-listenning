@@ -22,6 +22,8 @@ Open:
 
 The root page is a static demo in `web/`. It can create sessions, request tasks, play returned audio, submit answers, refresh progress, and show API debug/error states.
 
+`GET /api/v1/tasks/next` calls online `edge-tts`. If the current network cannot reach the TTS service, task/audio generation may fail while the rest of the API and frontend remain available for validation.
+
 ## Core API
 
 - `GET /health`
@@ -45,6 +47,8 @@ Run API smoke after starting uvicorn:
 ```powershell
 .\scripts\api_smoke_test.ps1 -BaseUrl http://127.0.0.1:8000 -UserId demo_smoke
 ```
+
+If online TTS is blocked, this smoke may fail at `/api/v1/tasks/next`. In that case, verify `/`, `/docs`, `/openapi.json`, `/health`, and `POST /api/v1/sessions`, then use the frontend error/debug state as the expected restricted-network behavior.
 
 Run the fast offline pipeline smoke:
 

@@ -1,106 +1,121 @@
-# AGENTS.md — SRTP-CAPD 项目 Codex 协作规则
+# AGENTS.md - SRTP-CAPD Codex Collaboration Rules
 
-## 0. 项目目标
+## 0. Project Goal
 
-本仓库目标是完成「面向听觉障碍人群的语音识别康复系统」后端 MVP，供小程序调用。
+This repository provides the backend MVP for a CAPD listening rehabilitation mini program. The backend should support:
 
-MVP 后端必须至少支持：
+1. selecting training sentences from the corpus database;
+2. generating training audio for selected sentences;
+3. applying difficulty controls such as speed, SNR, and noise profile;
+4. receiving user dictation or recognition answers;
+5. recording user sessions, tasks, answers, progress, and difficulty changes;
+6. exporting stable API documentation for frontend and mini program integration.
 
-1. 从语料库中抽取训练句子；
-2. 为句子生成训练音频；
-3. 支持不同难度参数，例如语速、信噪比、语境类型；
-4. 接收用户听写/识别结果；
-5. 记录用户训练数据、答题历史、难度变化；
-6. 导出稳定 API 文档，供小程序前端接入。
+## 1. Required Reading Before Work
 
-## 1. 每个 Codex 进程开始前必须读取
-
-每个 Codex 进程开始执行任务前，必须先读取以下文件：
+Every Codex process must read these files before starting a task:
 
 1. `AGENTS.md`
 2. `docs/PROJECT_STATE.md`
 3. `docs/STATE_MACHINE.md`
 4. `.codex/shared_state.json`
-5. 自己对应的 `.codex/tasks/Txx_*.md`
+5. the relevant `.codex/tasks/Txx_*.md` task file, when the work is tied to a numbered task.
 
-不要只看任务文件。必须结合共享状态文件判断哪些任务已经完成、哪些任务仍然阻塞。
+Do not rely only on the task file. Use `.codex/shared_state.json` and `.codex/logs/` to understand what is complete, blocked, or risky.
 
-## 2. Codex 进程之间如何“通信”
+## 2. Shared State And Logs
 
-统一通过 `.codex/shared_state.json` 和 `.codex/logs/` 目录通信。
+Agents communicate through `.codex/shared_state.json` and `.codex/logs/`.
 
-每个进程开始时：
+At task start:
 
-1. 在 `.codex/shared_state.json` 中把自己的任务状态改为 `in_progress`；
-2. 填写 `owner`，例如 `codex-T02-api`；
-3. 填写 `started_at`；
-4. 不要改动其他任务的状态，除非你明确完成了其依赖项。
+1. set the task status to `in_progress`;
+2. set `owner`, for example `codex-T10-full-demo-acceptance`;
+3. set `started_at`;
+4. avoid changing other task statuses unless a dependency is explicitly completed by your work.
 
-每个进程结束时：
+At task completion:
 
-1. 将任务状态改为 `done` / `blocked` / `needs_review`；
-2. 写入 `completed_at` 或 `blocked_reason`；
-3. 更新 `files_changed`；
-4. 更新 `tests_run`；
-5. 将最终总结写入 `.codex/logs/Txx_result.md`；
-6. 若修改了 API，必须同步更新 `docs/API_CONTRACT.md` 或 `docs/openapi-draft.yaml`。
+1. set the task status to `done`, `blocked`, or `needs_review`;
+2. set `completed_at` or `blocked_reason`;
+3. update `files_changed`;
+4. update `tests_run`;
+5. write a result summary to `.codex/logs/Txx_result.md`;
+6. if API behavior changes, update `docs/API_CONTRACT.md` or `docs/openapi-draft.yaml`;
+7. if database schema changes, update `docs/DATABASE_SCHEMA.md`.
 
-## 3. 禁止事项
+## 3. Safety Rules
 
-- 不要把任何 API Key、token、cookie、数据库密码写进仓库。
-- 不要提交 `.env`、`~/.codex/auth.json`、云服务器密钥、真实用户数据。
-- 不要直接删除原始语料。
-- 不要为了“跑通”而绕过核心逻辑，例如把真实评分函数替换成随机数。
-- 不要在没有小样本验证和时间估算前租用 GPU 服务器跑全量任务。
-- 不要一次性重构整个项目；每个任务只做自己范围内的最小可验证修改。
+- Do not commit API keys, tokens, cookies, database passwords, cloud credentials, or real user data.
+- Do not commit `.env`, `~/.codex/auth.json`, generated audio, virtual environments, caches, or temporary local files.
+- Do not delete original corpus data.
+- Do not bypass core logic just to make a demo pass.
+- Do not rent GPU servers or run full-scale expensive jobs before small smoke tests and timing estimates.
+- Do not perform broad refactors unless the user explicitly asks for them.
+- Do not modify `Project Completion Defense/` unless the user explicitly asks for that folder.
 
-## 4. 当前已知高优先级问题
+## 4. Current High-priority Notes
 
-1. 代码格式可能存在缺少换行/不可编译问题，必须先运行 `python -m py_compile` 验证。
-2. `llm_augment.py` 中可能存在硬编码 API Key，必须移除并改为环境变量。
-3. 数据库目前只覆盖 `sentences`，缺少用户、会话、答题记录、训练进度等表。
-4. API 目前只有 `/start`、`/next_task`、`/submit` 的雏形，不足以给小程序长期稳定接入。
-5. 音频噪声目前偏“突兀”，应从白噪声升级为可配置噪声 profile，并加入渐入/渐出、归一化和固定随机种子。
-6. 离线语料处理未形成可恢复、可分批、可统计的 pipeline。
-7. 缺少自动化测试和 API contract 测试。
+The MVP is now validated through T10. Current practical status:
 
-## 5. 推荐本地命令
+- `/api/v1` API contract exists and is covered by tests.
+- SQLite persistence covers users, sessions, tasks, answers, and progress.
+- `GET /` serves the local static frontend demo from `web/`.
+- The frontend can create sessions, request tasks, play returned audio when TTS is available, submit answers, refresh progress, and show API debug/error states.
+- `GET /api/v1/tasks/next` depends on online `edge-tts`; restricted networks may fail while connecting to `speech.platform.bing.com:443`. This is an environment limitation, not an API contract change.
+- `capd_database.db` is a local demo database and may be touched by smoke tests. Do not treat it as production or real user data.
 
-Windows PowerShell / Git Bash 均可，但建议优先在项目根目录执行：
+## 5. Recommended Local Commands
 
-```bash
+Windows PowerShell:
+
+```powershell
 python -m venv .venv
-source .venv/Scripts/activate  # Git Bash on Windows
-# 或 PowerShell: .\.venv\Scripts\Activate.ps1
-
+.\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-python -m py_compile data_pipeline/*.py server/*.py
-python -m uvicorn server.main:app --reload
-```
-
-若已添加 pytest：
-
-```bash
+python -m compileall -q data_pipeline server tests
 pytest -q
+python -c "import server.main; print('server import ok')"
+python -m data_pipeline.run_pipeline --help
 ```
 
-## 6. 完成标准
+Start the local API and frontend:
 
-一个任务只有同时满足以下条件才算 `done`：
+```powershell
+python -m uvicorn server.main:app --host 127.0.0.1 --port 8000
+```
 
-1. 代码可以编译；
-2. 相关测试或 smoke test 已运行；
-3. API 或数据结构变化已写入文档；
-4. `.codex/shared_state.json` 已更新；
-5. `.codex/logs/Txx_result.md` 已写明完成内容、验证命令、剩余风险。
+Open:
 
-## 7. 面向小程序的 API 约定
+- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/docs`
+- `http://127.0.0.1:8000/openapi.json`
 
-后端 API 统一使用 `/api/v1` 前缀。历史接口可以保留，但新接口必须优先走 `/api/v1`。
+Run API smoke after the server is running:
 
-最低目标接口：
+```powershell
+.\scripts\api_smoke_test.ps1 -BaseUrl http://127.0.0.1:8000 -UserId demo_user
+```
+
+If online TTS is blocked, this smoke may fail at `/api/v1/tasks/next`.
+
+## 6. Completion Standard
+
+A task is `done` only when:
+
+1. relevant code compiles;
+2. relevant tests or smoke checks have been run, or skipped with a clear reason;
+3. API or data-structure changes are documented;
+4. `.codex/shared_state.json` is updated;
+5. `.codex/logs/Txx_result.md` records what changed, commands run, remaining risks, and submit/no-submit notes.
+
+## 7. Mini Program API Contract
+
+New integration should use the `/api/v1` prefix. Legacy `/start`, `/next_task`, and `/submit` routes are compatibility-only.
+
+Minimum stable endpoints:
 
 - `GET /health`
 - `POST /api/v1/sessions`
@@ -109,4 +124,4 @@ pytest -q
 - `GET /api/v1/users/{user_id}/progress`
 - `GET /openapi.json`
 
-返回 JSON 字段必须稳定，不要随意更名。
+Keep JSON response field names stable unless the user explicitly requests a contract change.

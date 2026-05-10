@@ -1,16 +1,17 @@
 # Next Phase Plan - Frontend Demo And Integration
 
-Updated: 2026-05-09
+Updated: 2026-05-10
 
 ## Status
 
-T07, T08, and T09 are complete.
+T07, T08, T09, and T10 are complete.
 
 - T07 added the static frontend shell and served it from `/`.
 - T08 wired the frontend to the `/api/v1` session/task/audio/answer/progress flow.
 - T09 polished the frontend, improved accessibility, responsive layout, theme modes, state handling, and API debug visibility.
+- T10 ran final full demo acceptance. Automated tests and static/demo routes passed. Real task/audio/API smoke is limited by online `edge-tts` network access in the current environment.
 
-The remaining next-phase task is T10 full demo acceptance.
+There is no remaining numbered frontend-demo task in the current plan.
 
 ## Current Demo Surface
 
@@ -50,22 +51,22 @@ This does not change the API contract. For local validation, confirm that:
 
 ## T10_full_demo_acceptance
 
-Goal: final acceptance for backend plus local frontend demo.
+Status: complete.
 
-Required reads:
+Acceptance summary:
 
-- `AGENTS.md`
-- `.codex/shared_state.json`
-- `docs/API_CONTRACT.md`
-- `docs/TECHNICAL_OVERVIEW.md`
-- `docs/NEXT_PHASE_PLAN.md`
-- `docs/FRONTEND_INTEGRATION.md`
-- `.codex/logs/T07_result.md`
-- `.codex/logs/T08_result.md`
-- `.codex/logs/T09_result.md`
-- `.codex/tasks/T10_full_demo_acceptance.md`
+- `python -m compileall -q data_pipeline server tests` passed.
+- `pytest -q` passed.
+- `python -c "import server.main; print('server import ok')"` passed.
+- `python -m data_pipeline.run_pipeline --help` passed.
+- `/`, `/docs`, and `/openapi.json` returned 200 under uvicorn.
+- `POST /api/v1/sessions` succeeded.
+- `/api/v1/tasks/next` hit the known online TTS/network failure path in this environment.
+- API smoke reached health/session and then failed at task generation because online TTS was unavailable.
 
-Recommended checks:
+See `.codex/logs/T10_result.md` for the detailed acceptance record.
+
+## Recommended Checks For Future Changes
 
 ```powershell
 python -m compileall -q data_pipeline server tests
@@ -91,12 +92,12 @@ Check:
 - answer/progress flow where a task exists;
 - API smoke script where TTS/network permits.
 
-Outputs:
+## Handoff Notes
 
-- update `.codex/shared_state.json`;
-- write `.codex/logs/T10_result.md`;
-- update README/demo docs only if final acceptance finds gaps;
-- produce a final submit/no-submit file list.
+- Use `docs/DEMO_RUNBOOK.md` for local demo steps.
+- Use `docs/FRONTEND_INTEGRATION.md` for mini program integration guidance.
+- Keep `/api/v1` response field names stable.
+- Do not treat TTS network failure as an API contract change.
 
 ## File Hygiene
 

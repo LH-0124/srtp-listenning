@@ -1,14 +1,14 @@
 # PROJECT_STATE.md - SRTP-CAPD Project State
 
-Updated: 2026-05-09
+Updated: 2026-05-10
 
 ## Current Position
 
 The project is now a backend MVP with a local frontend demo. It is suitable for local demonstration and for mini program API integration planning.
 
-Current state in `.codex/shared_state.json`: `S6_TESTS_READY`.
+Current practical state: `S8_DEMO_READY`.
 
-Practical demo readiness after T07-T09:
+Practical demo readiness after T07-T10:
 
 - `/api/v1` API contract is implemented and covered by tests.
 - SQLite persistence exists for users, sessions, tasks, answers, and progress.
@@ -17,6 +17,7 @@ Practical demo readiness after T07-T09:
 - Automated tests pass.
 - `GET /` serves a local static frontend demo from `web/`.
 - The frontend can drive the session/task/answer/progress API flow and show friendly TTS/network error states.
+- T10 full demo acceptance has been run. Automated tests and static/demo routes passed; the real task/audio/API smoke path is limited in this environment by online `edge-tts` network access.
 
 ## Completed Milestones
 
@@ -29,6 +30,7 @@ Practical demo readiness after T07-T09:
 - T07 static frontend shell.
 - T08 frontend API flow demo.
 - T09 frontend polish and accessibility pass.
+- T10 full demo acceptance.
 
 ## Current Known Risks
 
@@ -37,12 +39,23 @@ Practical demo readiness after T07-T09:
 - Generated audio naturalness still needs human listening review, especially for noisy profiles.
 - `capd_database.db` is a local demo database and may change during smoke tests. Do not treat it as real user data.
 
+## Current Demo Checklist
+
+For local demonstration:
+
+- run `python -m compileall -q data_pipeline server tests`;
+- run `pytest -q`;
+- start `python -m uvicorn server.main:app --host 127.0.0.1 --port 8000`;
+- open `/`, `/docs`, and `/openapi.json`;
+- create a session from the frontend;
+- request a task if online TTS/network permits;
+- if TTS is blocked, confirm the frontend keeps the session and shows task/audio error plus API debug information.
+
 ## Next Step
 
-Run T10 full demo acceptance:
+Prepare presentation materials and integration handoff notes. For engineering work, the next useful tasks are:
 
-- rerun automated tests;
-- verify `/`, `/docs`, and `/openapi.json`;
-- run API smoke where TTS/network permits;
-- update final README/demo docs if needed;
-- produce the final submit/no-submit file list.
+- confirm online TTS access in the target demo environment;
+- perform human listening review of generated audio;
+- benchmark larger BERT/LTP/GPT pipeline samples only after small smoke runs are stable;
+- keep API field names stable for mini program integration.
