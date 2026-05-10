@@ -8,3 +8,4 @@ assets/*.wav
 .codex/logs/*.jsonl
 *.zip
 data_pipeline/raw_data/
+new_capd_datebase.db

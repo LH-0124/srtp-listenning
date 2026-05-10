@@ -5,7 +5,7 @@ from ltp import LTP
 import numpy as np
 
 class ContextScorer:
-    def __init__(self, model_name='hfl/chinese-bert-wwm-ext', ltp_path=None, device='auto'):
+    def __init__(self, model_name='hfl/chinese-bert-wwm-ext', ltp_path=None):
         """
         初始化评分器
         :param model_name: 使用哈工大讯飞的全词掩码模型 'hfl/chinese-bert-wwm-ext'
@@ -13,16 +13,8 @@ class ContextScorer:
         """
         print(f"正在加载 BERT 模型: {model_name} ...")
         # 使用 Fast 分词器以获取 offset_mapping，用于对齐 LTP 分词结果
-        if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        if device == "cuda" and not torch.cuda.is_available():
-            raise RuntimeError("CUDA was requested but torch.cuda.is_available() is false")
-        self.device = torch.device(device)
-        print(f"ContextScorer device: {self.device}")
-
         self.tokenizer = BertTokenizerFast.from_pretrained(model_name)
         self.model = BertForMaskedLM.from_pretrained(model_name)
-        self.model.to(self.device)
         self.model.eval()
 
         print("正在加载 LTP 分词模型 (首次运行可能需要下载) ...")
@@ -53,7 +45,6 @@ class ContextScorer:
         inputs = self.tokenizer(sentence, return_tensors="pt", return_offsets_mapping=True)
         input_ids = inputs["input_ids"][0]
         offsets = inputs["offset_mapping"][0] # List[(start, end)]
-        input_ids = input_ids.to(self.device)
 
         # 3. 构建词语的字符跨度 (Span)
         # LTP 不直接返回 offset，我们需要累加长度计算
@@ -122,7 +113,6 @@ class ContextScorer:
         
         # 使用 Pseudo-PPL 计算方法：累加每个 Token 在 Mask 下的 Loss
         inputs = self.tokenizer(sentence, return_tensors="pt")
-        inputs = {key: value.to(self.device) for key, value in inputs.items()}
         input_ids = inputs["input_ids"]
         labels = input_ids.clone()
         

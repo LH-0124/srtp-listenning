@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DB_PATH = PROJECT_ROOT / "new_capd_datebase.db"
+DB_PATH = PROJECT_ROOT / "capd_database.db"
 
 
 def utc_now() -> str:

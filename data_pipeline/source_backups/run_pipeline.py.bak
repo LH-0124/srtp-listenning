@@ -69,7 +69,7 @@ class HeuristicScorer:
         return len(sentence) < 4 or repeated_ratio > 0.85
 
 
-def build_scorer(kind: str, device: str = "auto"):
+def build_scorer(kind: str):
     if kind == "heuristic":
         return HeuristicScorer()
 
@@ -78,7 +78,7 @@ def build_scorer(kind: str, device: str = "auto"):
     else:
         from .context_scoring import ContextScorer
 
-    return ContextScorer(device=device)
+    return ContextScorer()
 
 
 def generate_variants(seed_sentence: str, num_variants: int) -> list[str]:
@@ -90,18 +90,10 @@ def generate_variants(seed_sentence: str, num_variants: int) -> list[str]:
     return generate_similar_sentences(seed_sentence, num_variants=num_variants)
 
 
-def iter_clean_sentences(
-    input_path: Path,
-    limit: int | None,
-    max_input_bytes: int | None = None,
-) -> Iterator[tuple[int, str, str]]:
+def iter_clean_sentences(input_path: Path, limit: int | None) -> Iterator[tuple[int, str, str]]:
     emitted = 0
-    consumed_bytes = 0
     with input_path.open("r", encoding="utf-8") as source:
         for line_number, raw_line in enumerate(source, start=1):
-            consumed_bytes += len(raw_line.encode("utf-8"))
-            if max_input_bytes is not None and consumed_bytes > max_input_bytes:
-                break
             cleaned = clean_text(raw_line)
             if not cleaned:
                 continue
@@ -159,11 +151,8 @@ def run_pipeline(args: argparse.Namespace) -> PipelineStats:
     started = time.perf_counter()
 
     try:
-        scorer = build_scorer(args.scorer, args.device)
-        max_input_bytes = None
-        if args.max_input_mb is not None:
-            max_input_bytes = int(args.max_input_mb * 1024 * 1024)
-        clean_items = iter_clean_sentences(input_path, args.limit, max_input_bytes)
+        scorer = build_scorer(args.scorer)
+        clean_items = iter_clean_sentences(input_path, args.limit)
 
         for batch in batched(clean_items, args.batch_size):
             for line_number, raw_text, text in batch:
@@ -227,12 +216,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="TSV output path.")
     parser.add_argument("--db-path", default=str(DB_PATH), help="SQLite database path.")
     parser.add_argument("--limit", type=int, default=None, help="Maximum cleaned source sentences to process.")
-    parser.add_argument(
-        "--max-input-mb",
-        type=float,
-        default=None,
-        help="Stop after reading approximately this many MiB from the raw input file.",
-    )
     parser.add_argument("--batch-size", type=int, default=8, help="Number of source sentences per checkpoint.")
     parser.add_argument("--resume", action="store_true", help="Skip sentences already present in the database.")
     parser.add_argument(
@@ -242,12 +225,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Use bert for production scoring or heuristic for offline smoke tests.",
     )
     parser.add_argument("--high-threshold", type=float, default=0.4, help="Score threshold for HIGH context.")
-    parser.add_argument(
-        "--device",
-        choices=("auto", "cpu", "cuda"),
-        default="auto",
-        help="Device for BERT scoring. auto uses CUDA when available, otherwise CPU.",
-    )
     parser.add_argument("--no-augment", action="store_true", help="Disable GPT augmentation for LOW sentences.")
     parser.add_argument("--augment-count", type=int, default=3, help="Number of GPT variants per LOW sentence.")
     parser.add_argument("--anomaly-threshold", type=float, default=35.0, help="Pseudo-PPL anomaly threshold.")
@@ -257,8 +234,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         parser.error("--limit must be positive")
     if args.batch_size < 1:
         parser.error("--batch-size must be positive")
-    if args.max_input_mb is not None and args.max_input_mb <= 0:
-        parser.error("--max-input-mb must be positive")
     if args.augment_count < 0:
         parser.error("--augment-count cannot be negative")
     return args
