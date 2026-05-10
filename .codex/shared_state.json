@@ -6,9 +6,9 @@
   "completion_percent_estimate": 90,
   "budget_remaining_cny": 700,
   "target": "完成可供小程序调用的后端 MVP，并保留语料处理、音频生成、用户训练记录、API 文档。",
-  "last_updated_at": "2026-05-09T20:57:21+08:00",
-  "last_updated_by": "codex-T09-frontend-polish",
-  "state_notes": "T09 completed: static frontend demo has polished day/night themes, clear loading/error/success/empty states, responsive layout, and API debug visibility. Paused before T10.",
+  "last_updated_at": "2026-05-10T16:50:24+08:00",
+  "last_updated_by": "codex-T10-full-demo-acceptance",
+  "state_notes": "T10 completed: automated tests and static/demo routes passed; real task/audio/API smoke is limited by online edge-tts network failure in this environment.",
   "global_constraints": [
     "不要提交 API Key 或真实用户数据",
     "先做小样本 smoke test，再决定是否租 GPU",
@@ -365,8 +365,10 @@
       ]
     },
     "T10_full_demo_acceptance": {
-      "status": "not_started",
-      "owner": null,
+      "status": "done",
+      "owner": "codex-T10-full-demo-acceptance",
+      "started_at": "2026-05-10T16:38:32+08:00",
+      "completed_at": "2026-05-10T16:50:24+08:00",
       "depends_on": [
         "T07_static_frontend_shell",
         "T08_frontend_api_flow_demo",
@@ -380,8 +382,19 @@
         "README and demo docs explain full frontend/backend run",
         "Submit/no-submit file list is documented"
       ],
-      "files_changed": [],
-      "tests_run": []
+      "files_changed": [
+        ".codex/shared_state.json",
+        ".codex/logs/T10_result.md"
+      ],
+      "tests_run": [
+        "python -m compileall -q data_pipeline server tests (passed)",
+        "pytest -q (passed: 14 passed; xonsh history permission warning emitted after success)",
+        "python -c \"import server.main; print('server import ok')\" (passed)",
+        "python -m data_pipeline.run_pipeline --help (passed)",
+        "uvicorn HTTP validation for /health, /, /docs, /openapi.json, and POST /api/v1/sessions (passed)",
+        "GET /api/v1/tasks/next real TTS validation (failed with 500 due online edge-tts/network limitation)",
+        ".\\scripts\\api_smoke_test.ps1 -BaseUrl http://127.0.0.1:8000 -UserId demo_user (health and session passed; failed/timed out at /api/v1/tasks/next due online edge-tts/network limitation)"
+      ]
     }
   }
 }

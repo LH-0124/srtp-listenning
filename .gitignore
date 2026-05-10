@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 .venv/
+Project Completion Defense/
 assets/*.mp3
 assets/*.wav
 .codex/logs/*.jsonl
